@@ -13,6 +13,7 @@
         "subscriptionPlan": { "type": "string", "enum": ["free", "pro"], "description": "Subscription plan" },
         "activePlanId": { "type": "string", "description": "ID of the active subscription plan" },
         "subscriptionDate": { "type": "string", "format": "date-time", "description": "Date when the subscription was activated" },
+        "seenMessageIds": { "type": "array", "items": { "type": "string" }, "description": "IDs of messages already seen by the user" },
         "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
       },
       "required": ["uid", "email", "role", "subscriptionPlan", "createdAt"]

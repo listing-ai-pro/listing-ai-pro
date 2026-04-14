@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
+import { collection, query, where, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { db, auth } from '../firebase';
+import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { Bell, X, Info } from 'lucide-react';
 
 export default function AdminMessageOverlay({ user }: { user: any }) {
@@ -31,8 +32,14 @@ export default function AdminMessageOverlay({ user }: { user: any }) {
           (msg.target === 'TRIAL' && user.activePlanId === 'trial');
 
         if (isTargeted) {
-          setActiveMessage(msg);
-          setDismissed(false); // Reset dismissal for new messages
+          // Check if user has already seen this message
+          const seenIds = user.seenMessageIds || [];
+          if (!seenIds.includes(msg.id)) {
+            setActiveMessage(msg);
+            setDismissed(false);
+          } else {
+            setActiveMessage(null);
+          }
         } else {
           setActiveMessage(null);
         }
@@ -43,6 +50,22 @@ export default function AdminMessageOverlay({ user }: { user: any }) {
 
     return () => unsubscribe();
   }, [user]);
+
+  const handleDismiss = async () => {
+    if (!activeMessage || !user) return;
+    
+    setDismissed(true);
+    
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        seenMessageIds: arrayUnion(activeMessage.id)
+      });
+    } catch (error) {
+      console.error("Error marking message as seen:", error);
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`, auth);
+    }
+  };
 
   if (!activeMessage || dismissed) return null;
 
@@ -82,14 +105,14 @@ export default function AdminMessageOverlay({ user }: { user: any }) {
             </div>
 
             <button
-              onClick={() => setDismissed(true)}
+              onClick={handleDismiss}
               className="w-full py-5 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 active:scale-95"
             >
               I Understand
             </button>
             
             <button 
-              onClick={() => setDismissed(true)}
+              onClick={handleDismiss}
               className="absolute top-6 right-6 h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"
             >
               <X className="h-5 w-5" />

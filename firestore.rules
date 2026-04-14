@@ -36,6 +36,7 @@ service cloud.firestore {
              (!('sellerId' in data) || (data.sellerId is string && data.sellerId.size() < 32)) &&
              (!('activePlanId' in data) || data.activePlanId is string) &&
              (!('subscriptionDate' in data) || data.subscriptionDate is timestamp) &&
+             (!('seenMessageIds' in data) || (data.seenMessageIds is list)) &&
              (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 128));
     }
 
