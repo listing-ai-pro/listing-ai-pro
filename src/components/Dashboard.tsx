@@ -107,7 +107,7 @@ const AIDemoAnimation = () => {
                     key="product"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    src="https://picsum.photos/seed/kurti/800/800"
+                    src="https://picsum.photos/seed/blouse-embroidered/800/800"
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                   />
@@ -127,7 +127,7 @@ const AIDemoAnimation = () => {
         </div>
 
         {/* Right: Output */}
-        <div className="p-8 lg:p-12 bg-[#0d1117]">
+        <div className="p-8 lg:p-12 bg-[#0d1117] overflow-y-auto max-h-[600px] hide-scrollbar">
           <div className="space-y-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-slate-500">
@@ -158,7 +158,7 @@ const AIDemoAnimation = () => {
             <div className="space-y-6">
               <div className="space-y-2">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Optimized Title</p>
-                <div className="h-12 bg-slate-900/50 rounded-xl border border-slate-800 p-3 overflow-hidden">
+                <div className="min-h-[3rem] bg-slate-900/50 rounded-xl border border-slate-800 p-3 overflow-hidden">
                   <AnimatePresence mode="wait">
                     {step >= 2 ? (
                       <motion.p 
@@ -166,7 +166,7 @@ const AIDemoAnimation = () => {
                         animate={{ opacity: 1, y: 0 }}
                         className="text-xs font-bold text-slate-200 leading-relaxed"
                       >
-                        Premium Cotton A-Line Kurti for Women — Ethnic Casual Wear
+                        Premium Embroidered Phantom Silk Blouse — Heavy Work Designer Wear
                       </motion.p>
                     ) : (
                       <div className="flex gap-1">
@@ -183,9 +183,9 @@ const AIDemoAnimation = () => {
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Key Features</p>
                 <div className="space-y-2">
                   {[
-                    "100% Premium Cotton — Breathable",
-                    "A-Line Fit — Flattering for all body types",
-                    "Machine Washable — Long-lasting color"
+                    "Heavy Multi-Color Embroidery — Premium Finish",
+                    "Phantom Silk Fabric — Elegant & Comfortable",
+                    "Designer Back Pattern with Latkans"
                   ].map((f, i) => (
                     <motion.div 
                       key={i}
@@ -204,7 +204,7 @@ const AIDemoAnimation = () => {
               <div className="space-y-2">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Keywords</p>
                 <div className="flex flex-wrap gap-2">
-                  {["cotton kurti", "women kurta", "ethnic wear", "casual kurti"].map((k, i) => (
+                  {["embroidered blouse", "designer blouse", "phantom silk", "meesho blouse"].map((k, i) => (
                     <motion.span 
                       key={i}
                       initial={{ opacity: 0, scale: 0.8 }}
@@ -214,6 +214,35 @@ const AIDemoAnimation = () => {
                     >
                       {k}
                     </motion.span>
+                  ))}
+                </div>
+              </div>
+
+              {/* AI Product Images (Model Transformation) */}
+              <div className="space-y-3 pt-4 border-t border-slate-800">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">AI Product Images</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Lifestyle', seed: 'fashion-model-blouse' },
+                    { label: 'Studio', seed: 'studio-wear' }
+                  ].map((img, i) => (
+                    <motion.div 
+                      key={i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={step >= 3 ? { opacity: 1, y: 0 } : { opacity: 0 }}
+                      transition={{ delay: 0.5 + (i * 0.2) }}
+                      className="relative aspect-[3/4] rounded-xl bg-slate-900 border border-slate-800 overflow-hidden group"
+                    >
+                      <img 
+                        src={`https://picsum.photos/seed/${img.seed}/400/533`}
+                        className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                        referrerPolicy="no-referrer"
+                        alt={img.label}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent flex items-end p-3">
+                        <span className="text-[8px] font-black text-white uppercase tracking-widest">{img.label}</span>
+                      </div>
+                    </motion.div>
                   ))}
                 </div>
               </div>
