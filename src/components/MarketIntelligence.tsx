@@ -1,44 +1,92 @@
 import { useState } from 'react';
-import { trackUsage } from '../lib/usage';
-import { motion } from 'motion/react';
-import { Copy, Check, Search, Loader2, Tag, Percent, TrendingUp, DollarSign } from 'lucide-react';
+import { trackUsage, checkLimit, USAGE_LIMITS } from '../lib/usage';
+import { useUsage } from '../hooks/useUsage';
+import { generateGeminiContent } from '../lib/gemini';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Search, Loader2, Tag, Percent, TrendingUp, DollarSign, AlertCircle, 
+  Target, Shield, Zap, Info, BarChart3, PieChart, ArrowUpRight, 
+  CheckCircle2, XCircle, Lightbulb, ShieldAlert, TrendingDown,
+  ChevronRight, ExternalLink, Globe, Star
+} from 'lucide-react';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
+} from 'recharts';
 
 export default function MarketIntelligence({ user }: { user: any }) {
+  const { usage } = useUsage(user.uid);
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<any>(null);
-  const [rawText, setRawText] = useState('');
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const analyzeMarket = async () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const response = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: `Perform a live market analysis using Google Search for: ${query}. Return ONLY a valid JSON object with this exact structure: { "metrics": { "hsnCode": "string", "gstRate": "string", "avgPrice": "string", "demand": "string" }, "benchmarks": ["string", "string"], "competitors": [{ "name": "string", "price": "string", "rating": "string", "features": "string" }] }`,
-          modelName: 'gemini-3-flash-preview',
-          useSearch: true
-        })
+      const isWithinLimit = await checkLimit(user.uid, 'marketAnalysis');
+      if (!isWithinLimit) {
+        setErrorMsg(`Daily market analysis limit reached (${USAGE_LIMITS.marketAnalysis}/${USAGE_LIMITS.marketAnalysis}). Please try again tomorrow.`);
+        setLoading(false);
+        return;
+      }
+
+      const systemPrompt = `You are a professional market research analyst. Perform a deep-dive competitor and market analysis for the given query. 
+      
+      CRITICAL INSTRUCTIONS:
+      1. If the query is a URL (e.g., Amazon, Flipkart, or a brand website), you MUST analyze the specific product at that link first. Extract its EXACT current selling price.
+      2. Use Google Search to find the ACTUAL current prices of direct competitors on Amazon.in, Flipkart, and Meesho.
+      3. Do NOT provide "random" or "estimated" prices. The user needs real-time data.
+      4. All prices and monetary values MUST be in Indian Rupees (INR). Use the ₹ symbol.
+      5. Ensure the analysis is highly specific to the product/category provided in the query. 
+
+      Return ONLY a valid JSON object with this exact structure:
+      {
+        "metrics": {
+          "hsnCode": "string",
+          "gstRate": "string",
+          "avgPrice": "string (in INR with ₹ symbol)",
+          "demand": "string (Low/Medium/High)",
+          "marketSize": "string (in INR)",
+          "growthRate": "string"
+        },
+        "swot": {
+          "strengths": ["string"],
+          "weaknesses": ["string"],
+          "opportunities": ["string"],
+          "threats": ["string"]
+        },
+        "competitors": [
+          { "name": "string", "price": number (in INR), "rating": number, "marketShare": "string", "pros": ["string"], "cons": ["string"] }
+        ],
+        "sentiment": {
+          "score": number (0-100),
+          "summary": "string",
+          "topKeywords": ["string"]
+        },
+        "radarData": [
+          { "subject": "Price", "A": number (0-100) },
+          { "subject": "Quality", "A": number (0-100) },
+          { "subject": "Features", "A": number (0-100) },
+          { "subject": "Support", "A": number (0-100) },
+          { "subject": "Brand", "A": number (0-100) }
+        ]
+      }`;
+
+      const data = await generateGeminiContent({
+        prompt: systemPrompt + `\n\nQuery: ${query}`,
+        modelName: 'gemini-3.1-pro-preview',
+        useSearch: true
       });
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setRawText(data.text);
-      
       try {
-        const text = data.text.replace(/```json\n?|\n?```/g, '').trim();
-        setResult(JSON.parse(text));
+        const text = (data.text || '').replace(/```json\n?|\n?```/g, '').trim();
+        const parsed = JSON.parse(text);
+        setResult(parsed);
       } catch (e) {
         console.error('Failed to parse JSON', e);
-        setResult(null);
+        throw new Error('Failed to process market data. Please try again.');
       }
       
       await trackUsage(user.uid, 'marketAnalysis');
@@ -50,171 +98,389 @@ export default function MarketIntelligence({ user }: { user: any }) {
     }
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(rawText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="p-8 rounded-[2.5rem] bg-white border border-neutral-200 shadow-xl"
-    >
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-black tracking-tight text-slate-900 mb-2">Market Intelligence</h2>
-          <p className="text-sm font-bold uppercase tracking-widest text-neutral-500">Live Search Analysis</p>
-        </div>
-        {result && (
-          <button
-            onClick={handleCopy}
-            className="flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-4 py-2 text-sm font-bold text-blue-600 hover:bg-blue-100 transition-colors whitespace-nowrap"
+    <div className="max-w-7xl mx-auto space-y-12">
+      {/* Hero Section */}
+      <div className="relative">
+        <div className="max-w-3xl">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 mb-6"
           >
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            {copied ? 'Copied!' : 'Copy Raw Data'}
-          </button>
-        )}
+            <Globe className="h-4 w-4 text-blue-600" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">Global Market Intelligence</span>
+          </motion.div>
+          <h2 className="text-5xl lg:text-7xl font-black tracking-tight text-slate-900 mb-6 font-display leading-[0.9]">
+            Know Your <span className="text-blue-600">Market</span>,<br />
+            Beat the Odds.
+          </h2>
+          <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-slate-200 shadow-sm w-fit mb-6">
+            <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
+              <Globe className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Daily Credits</p>
+              <div className="flex items-center gap-3">
+                <div className="h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-blue-600 transition-all duration-500" 
+                    style={{ width: `${Math.min(100, (usage.marketAnalysis / USAGE_LIMITS.marketAnalysis) * 100)}%` }}
+                  ></div>
+                </div>
+                <span className="text-xs font-black text-slate-900">{usage.marketAnalysis} / {USAGE_LIMITS.marketAnalysis}</span>
+              </div>
+            </div>
+          </div>
+          <p className="text-xl font-medium text-slate-500 leading-relaxed max-w-xl">
+            Uncover competitor secrets, pricing benchmarks, and market gaps using real-time AI search and data visualization.
+          </p>
+        </div>
       </div>
 
-      <div className="space-y-8">
-        {errorMsg && (
-          <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-center gap-3 text-red-700">
-            <span className="text-sm font-bold">{errorMsg}</span>
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-bold uppercase tracking-widest text-neutral-500 mb-3">Product Category or Keyword</label>
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-              <Search className="h-6 w-6 text-neutral-400" />
+      {/* Search Bar */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full bg-white p-3 rounded-[3rem] border border-slate-100 shadow-2xl relative z-10"
+      >
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className="relative flex-1">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-8">
+              <Search className="h-6 w-6 text-slate-300" />
             </div>
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="e.g., Wireless Earbuds, Smart Watches..."
-              className="block w-full rounded-2xl border-2 border-neutral-200 py-4 pl-12 pr-4 text-slate-900 placeholder-neutral-400 focus:border-blue-600 focus:ring-0 transition-all font-medium"
+              onKeyDown={(e) => e.key === 'Enter' && analyzeMarket()}
+              placeholder="Enter product name, category, or competitor URL..."
+              className="block w-full rounded-[2rem] border-0 bg-slate-50 py-6 pl-18 pr-8 text-slate-900 placeholder-slate-300 focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all font-bold text-lg"
             />
           </div>
+          <button
+            onClick={analyzeMarket}
+            disabled={loading || !query}
+            className={`px-12 py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all shadow-xl ${
+              loading || !query
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                : 'bg-slate-900 text-white hover:bg-blue-600 shadow-blue-600/20 active:scale-95'
+            }`}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Analyzing
+              </>
+            ) : (
+              <>
+                <Zap className="h-5 w-5" />
+                Get Insights
+              </>
+            )}
+          </button>
         </div>
+      </motion.div>
 
-        <button
-          onClick={analyzeMarket}
-          disabled={loading || !query}
-          className={`px-10 py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-xl shadow-blue-500/20 w-full sm:w-auto ${
-            loading || !query
-              ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed shadow-none'
-              : 'bg-blue-600 text-white hover:bg-blue-700 hover:-translate-y-1'
-          }`}
+      {errorMsg && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-8 rounded-[2.5rem] bg-red-50 border border-red-100 flex items-center gap-6 text-red-700 shadow-xl shadow-red-500/5"
         >
-          {loading ? (
-            <Loader2 className="h-6 w-6 animate-spin" />
-          ) : (
-            <>
-              <Search className="h-6 w-6" />
-              Analyze Market
-            </>
-          )}
-        </button>
+          <div className="h-14 w-14 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
+            <ShieldAlert className="h-7 w-7" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest mb-1">Analysis Error</p>
+            <p className="text-sm font-bold opacity-80">{errorMsg}</p>
+          </div>
+        </motion.div>
+      )}
 
-        {result && result.metrics && (
+      <AnimatePresence>
+        {result && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-12 pt-8 border-t border-neutral-100 space-y-8"
+            className="space-y-12"
           >
-            {/* Metric Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="p-6 rounded-3xl bg-neutral-50 border border-neutral-100 flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-neutral-500 mb-2">
-                  <Tag className="h-5 w-5" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">HSN Code</span>
+            {/* Bento Grid: Phase 1 - Core Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <MetricCard 
+                icon={Tag} 
+                label="HSN Code" 
+                value={result.metrics.hsnCode} 
+                color="blue"
+              />
+              <MetricCard 
+                icon={Percent} 
+                label="GST Rate" 
+                value={result.metrics.gstRate} 
+                color="emerald"
+              />
+              <MetricCard 
+                icon={DollarSign} 
+                label="Avg Price" 
+                value={result.metrics.avgPrice.includes('₹') ? result.metrics.avgPrice : `₹${result.metrics.avgPrice}`} 
+                color="blue"
+              />
+              <MetricCard 
+                icon={TrendingUp} 
+                label="Demand" 
+                value={result.metrics.demand} 
+                color="orange"
+              />
+            </div>
+
+            {/* Visual Insights Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+              {/* Price Comparison Chart */}
+              <div className="lg:col-span-7 bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-blue-50 rounded-full blur-3xl -mr-20 -mt-20 opacity-30"></div>
+                <div className="flex items-center justify-between mb-10">
+                  <div>
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">Market Benchmarking</h4>
+                    <h3 className="text-2xl font-black text-slate-900 font-display">Price Comparison</h3>
+                  </div>
+                  <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-blue-600" />
+                  </div>
                 </div>
-                <div className="text-2xl font-black text-slate-900">{result.metrics.hsnCode}</div>
+                <div className="h-[350px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={result.competitors}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis 
+                        dataKey="name" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 800 }}
+                        dy={10}
+                      />
+                      <YAxis 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 800 }}
+                        tickFormatter={(value) => `₹${value}`}
+                      />
+                      <Tooltip 
+                        cursor={{ fill: '#f8fafc' }}
+                        contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.1)', padding: '16px' }}
+                        itemStyle={{ fontSize: '12px', fontWeight: '800', color: '#0f172a' }}
+                        formatter={(value: any) => [`₹${value}`, 'Price']}
+                      />
+                      <Bar dataKey="price" radius={[12, 12, 0, 0]} barSize={48}>
+                        {result.competitors.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#0f172a' : '#2563eb'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-              <div className="p-6 rounded-3xl bg-neutral-50 border border-neutral-100 flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-neutral-500 mb-2">
-                  <Percent className="h-5 w-5" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">GST Rate</span>
+
+              {/* Market Dynamics Radar */}
+              <div className="lg:col-span-5 bg-slate-900 p-10 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden">
+                <div className="absolute bottom-0 right-0 w-40 h-40 bg-blue-600 rounded-full blur-3xl -mr-20 -mb-20 opacity-30"></div>
+                <div className="flex items-center justify-between mb-10">
+                  <div>
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Attribute Analysis</h4>
+                    <h3 className="text-2xl font-black text-white font-display">Market Dynamics</h3>
+                  </div>
+                  <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
+                    <Target className="h-6 w-6 text-blue-400" />
+                  </div>
                 </div>
-                <div className="text-2xl font-black text-slate-900">{result.metrics.gstRate}</div>
-              </div>
-              <div className="p-6 rounded-3xl bg-neutral-50 border border-neutral-100 flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-neutral-500 mb-2">
-                  <DollarSign className="h-5 w-5" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Avg Price</span>
+                <div className="h-[350px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={result.radarData}>
+                      <PolarGrid stroke="#334155" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 800 }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                      <Radar
+                        name="Market Average"
+                        dataKey="A"
+                        stroke="#3b82f6"
+                        fill="#3b82f6"
+                        fillOpacity={0.4}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
                 </div>
-                <div className="text-2xl font-black text-slate-900">{result.metrics.avgPrice}</div>
-              </div>
-              <div className="p-6 rounded-3xl bg-neutral-50 border border-neutral-100 flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-neutral-500 mb-2">
-                  <TrendingUp className="h-5 w-5" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Demand</span>
-                </div>
-                <div className="text-2xl font-black text-slate-900">{result.metrics.demand}</div>
               </div>
             </div>
 
-            {/* Price Benchmarks */}
-            {result.benchmarks && result.benchmarks.length > 0 && (
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-500 mb-4">Price Benchmarks</h3>
-                <div className="flex flex-wrap gap-3">
-                  {result.benchmarks.map((benchmark: string, idx: number) => (
-                    <span key={idx} className="px-4 py-2 rounded-xl bg-blue-50 text-blue-700 font-bold text-sm border border-blue-100">
-                      {benchmark}
-                    </span>
-                  ))}
+            {/* SWOT Analysis */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <SWOTCard title="Strengths" items={result.swot.strengths} icon={CheckCircle2} color="emerald" />
+              <SWOTCard title="Weaknesses" items={result.swot.weaknesses} icon={XCircle} color="red" />
+              <SWOTCard title="Opportunities" items={result.swot.opportunities} icon={Lightbulb} color="amber" />
+              <SWOTCard title="Threats" items={result.swot.threats} icon={ShieldAlert} color="orange" />
+            </div>
+
+            {/* Sentiment Analysis */}
+            <div className="bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-64 h-64 bg-amber-50 rounded-full blur-3xl -ml-32 -mt-32 opacity-50"></div>
+              <div className="flex items-center justify-between mb-12">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">Customer Voice</h4>
+                  <h3 className="text-3xl font-black text-slate-900 font-display">Market Sentiment</h3>
+                </div>
+                <div className="h-16 w-16 rounded-[1.5rem] bg-amber-50 flex items-center justify-center">
+                  <Star className="h-8 w-8 text-amber-500" />
                 </div>
               </div>
-            )}
+              <div className="flex flex-col lg:flex-row items-center gap-16">
+                <div className="relative h-48 w-48 flex items-center justify-center shrink-0">
+                  <svg className="h-full w-full -rotate-90">
+                    <circle cx="96" cy="96" r="88" fill="transparent" stroke="#f1f5f9" strokeWidth="16" />
+                    <circle 
+                      cx="96" cy="96" r="88" fill="transparent" stroke="#f59e0b" strokeWidth="16" 
+                      strokeDasharray={553}
+                      strokeDashoffset={553 - (553 * result.sentiment.score) / 100}
+                      strokeLinecap="round"
+                      className="transition-all duration-1000 ease-out"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-5xl font-black text-slate-900">{result.sentiment.score}%</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Positive</span>
+                  </div>
+                </div>
+                <div className="flex-1 space-y-8">
+                  <p className="text-2xl font-medium text-slate-600 leading-relaxed italic font-display">
+                    "{result.sentiment.summary}"
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {result.sentiment.topKeywords.map((kw: string, i: number) => (
+                      <span key={i} className="px-6 py-3 rounded-2xl bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500 border border-slate-100 hover:bg-white hover:shadow-lg transition-all cursor-default">
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
 
-            {/* Comparison Table */}
-            {result.competitors && result.competitors.length > 0 && (
-              <div className="overflow-hidden rounded-3xl border border-neutral-200">
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse divide-y divide-neutral-100">
-                    <thead className="bg-neutral-50">
-                      <tr>
-                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-neutral-500">Competitor</th>
-                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-neutral-500">Price</th>
-                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-neutral-500">Rating</th>
-                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-neutral-500">Key Features</th>
+            {/* Competitor List */}
+            <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl overflow-hidden">
+              <div className="p-10 border-b border-slate-50 flex items-center justify-between">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">Competitive Landscape</h4>
+                  <h3 className="text-2xl font-black text-slate-900 font-display">Competitor Deep-Dive</h3>
+                </div>
+                <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center">
+                  <Shield className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50/50">
+                    <tr>
+                      <th className="px-10 py-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Competitor</th>
+                      <th className="px-10 py-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Price</th>
+                      <th className="px-10 py-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Rating</th>
+                      <th className="px-10 py-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Pros & Cons</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {result.competitors.map((comp: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-slate-50/30 transition-colors group">
+                        <td className="px-10 py-8">
+                          <div className="font-black text-slate-900 text-lg group-hover:text-blue-600 transition-colors">{comp.name}</div>
+                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{comp.marketShare} Market Share</div>
+                        </td>
+                        <td className="px-10 py-8">
+                          <span className="text-2xl font-black text-emerald-600 font-mono">₹{comp.price}</span>
+                        </td>
+                        <td className="px-10 py-8">
+                          <div className="flex items-center gap-2">
+                            <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+                            <span className="font-black text-slate-900 text-lg">{comp.rating}</span>
+                          </div>
+                        </td>
+                        <td className="px-10 py-8">
+                          <div className="flex flex-col gap-3 max-w-xs">
+                            <div className="flex flex-wrap gap-2">
+                              {comp.pros.map((p: string, i: number) => (
+                                <span key={i} className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-widest">{p}</span>
+                              ))}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {comp.cons.map((c: string, i: number) => (
+                                <span key={i} className="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest">{c}</span>
+                              ))}
+                            </div>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-neutral-100">
-                      {result.competitors.map((comp: any, idx: number) => (
-                        <tr key={idx} className="hover:bg-neutral-50/50 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">{comp.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-emerald-600">{comp.price}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-500">{comp.rating}</td>
-                          <td className="px-6 py-4 text-sm text-neutral-600">{comp.features}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </motion.div>
-        )}
-        
-        {/* Fallback for raw text if JSON parsing fails */}
-        {rawText && !result && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="mt-12 pt-8 border-t border-neutral-100"
-          >
-             <div className="rounded-3xl bg-slate-50 p-6 sm:p-8 border border-neutral-200 font-mono text-sm text-slate-700 whitespace-pre-wrap overflow-x-auto">
-              {rawText}
             </div>
           </motion.div>
         )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function MetricCard({ icon: Icon, label, value, color }: any) {
+  const colors: any = {
+    blue: "bg-blue-50 text-blue-600 border-blue-100",
+    emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    orange: "bg-orange-50 text-orange-600 border-orange-100",
+    purple: "bg-purple-50 text-purple-600 border-purple-100",
+    pink: "bg-pink-50 text-pink-600 border-pink-100",
+  };
+
+  return (
+    <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-xl flex flex-col gap-6 transition-all hover:shadow-2xl hover:-translate-y-1 group">
+      <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border ${colors[color]} group-hover:scale-110 transition-transform`}>
+        <Icon className="h-7 w-7" />
       </div>
-    </motion.div>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">{label}</p>
+        <p className="text-3xl font-black text-slate-900 font-mono tracking-tight">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function SWOTCard({ title, items, icon: Icon, color }: any) {
+  const colors: any = {
+    emerald: "text-emerald-700 bg-emerald-50 border-emerald-100",
+    red: "text-red-700 bg-red-50 border-red-100",
+    amber: "text-amber-700 bg-amber-50 border-amber-100",
+    orange: "text-orange-700 bg-orange-50 border-orange-100",
+  };
+
+  return (
+    <div className={`p-8 rounded-[2.5rem] border ${colors[color]} shadow-xl relative overflow-hidden group`}>
+      <div className="absolute top-0 right-0 w-24 h-24 bg-current opacity-5 rounded-full blur-2xl -mr-12 -mt-12 group-hover:scale-150 transition-transform"></div>
+      <div className="flex items-center gap-3 mb-6 relative">
+        <Icon className="h-6 w-6" />
+        <h4 className="text-xs font-black uppercase tracking-[0.2em]">{title}</h4>
+      </div>
+      <ul className="space-y-4 relative">
+        {items.map((item: string, i: number) => (
+          <li key={i} className="text-xs font-bold leading-relaxed opacity-80 flex gap-3">
+            <span className="shrink-0 opacity-40">•</span>
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function PriceTier({ label, value }: any) {
+  return (
+    <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 group hover:bg-white hover:shadow-sm transition-all">
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 group-hover:text-blue-500 transition-colors">{label}</p>
+      <p className="text-lg font-black text-slate-900 font-mono">₹{value.replace(/[^0-9,.]/g, '')}</p>
+    </div>
   );
 }

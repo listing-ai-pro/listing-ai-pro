@@ -1,19 +1,16 @@
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { authPromise } from '../firebase';
+import { auth, db } from '../firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { dbPromise } from '../firebase';
 import { motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
 
 export default function Auth() {
   const handleLogin = async () => {
     try {
-      const auth = await authPromise;
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      const db = await dbPromise;
       const userRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userRef);
 
@@ -33,24 +30,29 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 font-sans">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
-        className="w-full max-w-md rounded-[2.5rem] bg-white p-10 shadow-xl shadow-slate-200/50 border border-slate-100 text-center"
-      >
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/20">
-          <Sparkles className="h-8 w-8" />
-        </div>
-        <h1 className="mb-2 text-3xl font-bold text-slate-900 tracking-tight">Welcome Back</h1>
-        <p className="mb-8 text-slate-500">Sign in to access your AI E-commerce Suite</p>
-        
+    <motion.div 
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      className="w-full max-w-[480px] rounded-[3.5rem] bg-white p-12 lg:p-16 shadow-2xl border border-slate-100 text-center relative mx-auto"
+    >
+      <div className="mx-auto mb-10 flex h-20 w-20 items-center justify-center rounded-[2rem] bg-slate-900 text-white shadow-2xl shadow-slate-900/20">
+        <Sparkles className="h-10 w-10" />
+      </div>
+      
+      <div className="space-y-4 mb-12">
+        <h1 className="text-4xl font-black text-slate-900 tracking-tight font-display">ListingAI</h1>
+        <p className="text-base font-medium text-slate-500 leading-relaxed">
+          The enterprise-grade AI engine for modern marketplace sellers.
+        </p>
+      </div>
+      
+      <div className="space-y-6">
         <button
           onClick={handleLogin}
-          className="flex h-12 w-full items-center justify-center gap-3 rounded-2xl bg-slate-900 px-6 font-medium text-white hover:bg-slate-800 focus:ring-4 focus:ring-slate-900/20 transition-all"
+          className="flex h-16 w-full items-center justify-center gap-4 rounded-2xl bg-slate-900 px-8 font-black text-xs uppercase tracking-[0.2em] text-white hover:bg-slate-800 hover:-translate-y-1 transition-all shadow-2xl shadow-slate-900/20 active:scale-95 group"
         >
-          <svg className="h-5 w-5" viewBox="0 0 24 24">
+          <svg className="h-5 w-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
             <path
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
               fill="#4285F4"
@@ -70,7 +72,21 @@ export default function Auth() {
           </svg>
           Continue with Google
         </button>
-      </motion.div>
-    </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="h-px flex-1 bg-slate-100"></div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Secure Access</span>
+          <div className="h-px flex-1 bg-slate-100"></div>
+        </div>
+        
+        <p className="text-[10px] font-bold text-slate-400 leading-relaxed px-4">
+          By continuing, you agree to our Terms of Service and Privacy Policy. Your data is protected by enterprise-grade encryption.
+        </p>
+      </div>
+
+      {/* Floating Accents */}
+      <div className="absolute -bottom-6 -left-6 h-24 w-24 bg-blue-50 rounded-full blur-2xl opacity-50"></div>
+      <div className="absolute -top-6 -right-6 h-20 w-20 bg-purple-50 rounded-full blur-2xl opacity-50"></div>
+    </motion.div>
   );
 }

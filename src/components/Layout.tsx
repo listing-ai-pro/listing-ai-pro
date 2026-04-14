@@ -1,30 +1,34 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, FileText, Search, Camera, BookOpen, Settings, LogOut, Bell, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Image as ImageIcon, Search, Camera, Zap, BookOpen, CreditCard, ShieldCheck, User, Edit2, LogOut, MessageCircle, Monitor, RefreshCw, Maximize, FileText, Sparkles } from 'lucide-react';
 import { signOut } from 'firebase/auth';
-import { authPromise } from '../firebase';
+import { auth } from '../firebase';
 import { motion, AnimatePresence } from 'motion/react';
 import ListingGenerator from './ListingGenerator';
 import MarketIntelligence from './MarketIntelligence';
 import AIPhotoStudio from './AIPhotoStudio';
+import WhiteBackground from './WhiteBackground';
 import Dashboard from './Dashboard';
 import APlusContentGenerator from './APlusContentGenerator';
 import AdminPanel from './AdminPanel';
+import MeeshoShippingOptimizer from './MeeshoShippingOptimizer';
+import Subscription from './Subscription';
 
 export default function Layout({ children, user }: { children: React.ReactNode, user: any }) {
   const [activeTab, setActiveTab] = useState('Dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  const menuItems = [
+  const toolsAndFeatures = [
     { name: 'Dashboard', icon: LayoutDashboard },
     { name: 'Listing Generator', icon: FileText },
-    { name: 'Market Intelligence', icon: Search },
-    { name: 'AI Photo Studio', icon: Camera },
-    { name: 'A+ Content Generator', icon: BookOpen },
-    { name: 'Admin Panel', icon: Settings },
+    { name: 'White Background', icon: ImageIcon },
+    { name: 'Competitor Analysis', icon: Search },
+    { name: 'AI Photoshoot', icon: Camera, badge: 'PRO' },
+    { name: 'Low Shipping', icon: Zap, badge: 'NEW' },
+    { name: 'A+ Content', icon: BookOpen },
+    { name: 'Subscription', icon: CreditCard },
+    { name: 'Admin Dashboard', icon: ShieldCheck },
   ];
 
   const handleLogout = async () => {
-    const auth = await authPromise;
     await signOut(auth);
   };
 
@@ -34,13 +38,19 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
         return <Dashboard />;
       case 'Listing Generator':
         return <ListingGenerator user={user} />;
-      case 'Market Intelligence':
+      case 'White Background':
+        return <WhiteBackground user={user} />;
+      case 'Competitor Analysis':
         return <MarketIntelligence user={user} />;
-      case 'AI Photo Studio':
+      case 'AI Photoshoot':
         return <AIPhotoStudio user={user} />;
-      case 'A+ Content Generator':
+      case 'Low Shipping':
+        return <MeeshoShippingOptimizer user={user} />;
+      case 'A+ Content':
         return <APlusContentGenerator user={user} />;
-      case 'Admin Panel':
+      case 'Subscription':
+        return <Subscription user={user} />;
+      case 'Admin Dashboard':
         return <AdminPanel user={user} />;
       default:
         return children;
@@ -48,180 +58,156 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
   };
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 overflow-hidden font-sans">
-      {/* Mobile Sidebar Overlay */}
-      <AnimatePresence>
-        {!isSidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsSidebarOpen(true)}
-            className="fixed inset-0 z-20 bg-slate-900/20 backdrop-blur-sm lg:hidden"
-          />
-        )}
-      </AnimatePresence>
-
-      <motion.aside
-        initial={false}
-        animate={{ 
-          width: isSidebarOpen ? '16rem' : '5rem',
-          x: 0
-        }}
-        className={`relative z-30 flex flex-col bg-white border-r border-slate-200 shadow-xl shadow-slate-200/50 transition-all duration-300 ease-in-out ${
-          !isSidebarOpen ? '-translate-x-full lg:translate-x-0 absolute lg:relative h-full' : 'h-full'
-        }`}
-      >
-        <div className="flex h-20 items-center justify-between px-6 border-b border-slate-100">
-          <AnimatePresence mode="wait">
-            {isSidebarOpen && (
-              <motion.h2 
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
-                exit={{ opacity: 0, width: 0 }}
-                className="text-xl font-bold text-slate-900 flex items-center gap-3 whitespace-nowrap overflow-hidden"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
-                  <span className="text-sm">AI</span>
-                </div>
-                E-com Suite
-              </motion.h2>
-            )}
-          </AnimatePresence>
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors lg:hidden"
-          >
-            <X className="h-5 w-5" />
-          </button>
+    <div className="flex h-screen w-full bg-[#fcfdfe] overflow-hidden font-sans selection:bg-blue-100 selection:text-blue-900">
+      {/* Sidebar */}
+      <aside className="w-[300px] flex-shrink-0 flex flex-col bg-white border-r border-slate-100 h-full relative z-30">
+        {/* Logo Area */}
+        <div className="flex h-24 items-center px-8">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[1.25rem] bg-slate-900 text-white shadow-2xl shadow-slate-900/20">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 leading-none font-display">ListingAI</h2>
+              <p className="text-[10px] font-black text-blue-600 tracking-[0.2em] uppercase mt-1">Enterprise</p>
+            </div>
+          </div>
         </div>
 
-        <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-          {menuItems.map((item) => {
-            const isActive = activeTab === item.name;
-            return (
-              <button
-                key={item.name}
-                onClick={() => {
-                  setActiveTab(item.name);
-                  if (window.innerWidth < 1024) setIsSidebarOpen(false);
-                }}
-                className={`group relative flex w-full items-center rounded-2xl px-3 py-3.5 text-sm font-medium transition-all duration-200 ${
-                  isActive 
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-              >
-                <item.icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'} transition-colors`} />
-                <AnimatePresence mode="wait">
-                  {isSidebarOpen && (
-                    <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      exit={{ opacity: 0, width: 0 }}
-                      className="ml-3 whitespace-nowrap overflow-hidden"
-                    >
-                      {item.name}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-                
-                {/* Tooltip for collapsed state */}
-                {!isSidebarOpen && (
-                  <div className="absolute left-full ml-4 hidden rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white opacity-0 shadow-xl group-hover:block group-hover:opacity-100 lg:block z-50 whitespace-nowrap">
-                    {item.name}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="p-4 border-t border-slate-100">
-          <button 
-            onClick={handleLogout} 
-            className="group flex w-full items-center rounded-2xl px-3 py-3.5 text-sm font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
-          >
-            <LogOut className="h-5 w-5 flex-shrink-0 text-slate-400 group-hover:text-red-500 transition-colors" />
-            <AnimatePresence mode="wait">
-              {isSidebarOpen && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: 'auto' }}
-                  exit={{ opacity: 0, width: 0 }}
-                  className="ml-3 whitespace-nowrap overflow-hidden"
-                >
-                  Logout
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </button>
-        </div>
-      </motion.aside>
-
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-slate-50">
-        <header className="sticky top-0 z-10 flex h-20 flex-shrink-0 items-center gap-x-4 border-b border-slate-200 bg-white/80 px-4 shadow-sm backdrop-blur-md sm:gap-x-6 sm:px-6 lg:px-8">
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="-m-2.5 p-2.5 text-slate-700 lg:hidden"
-          >
-            <span className="sr-only">Open sidebar</span>
-            <Menu className="h-6 w-6" aria-hidden="true" />
-          </button>
-          
-          <div className="hidden lg:block">
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-4 space-y-10 overflow-y-auto hide-scrollbar">
+          {/* Tools & Features */}
+          <div>
+            <h3 className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Navigation</h3>
+            <div className="space-y-1.5">
+              {toolsAndFeatures.map((item) => {
+                const isActive = activeTab === item.name;
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => setActiveTab(item.name)}
+                    className={`group flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-sm font-bold transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-slate-900 text-white shadow-2xl shadow-slate-900/20 translate-x-1' 
+                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <item.icon className={`h-5 w-5 transition-colors duration-300 ${isActive ? 'text-blue-400' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                      <span className="tracking-tight">{item.name}</span>
+                    </div>
+                    {item.badge && (
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${
+                        isActive ? 'bg-white/10 text-white' : 'bg-blue-50 text-blue-600'
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-            <div className="flex flex-1 items-center">
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{activeTab}</h1>
-            </div>
-            <div className="flex items-center gap-x-4 lg:gap-x-6">
-              <button className="relative rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-500 transition-colors">
-                <span className="sr-only">View notifications</span>
-                <Bell className="h-6 w-6" aria-hidden="true" />
-                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
-              </button>
-
-              <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-slate-200" aria-hidden="true" />
-
-              <div className="flex items-center gap-x-4">
-                <div className="hidden sm:flex sm:flex-col sm:items-end">
-                  <span className="text-sm font-semibold leading-6 text-slate-900" aria-hidden="true">
-                    {user.displayName || 'User'}
-                  </span>
-                  <span className="text-xs leading-4 text-slate-500">{user.email}</span>
+          {/* User Profile Summary */}
+          <div className="px-4">
+            <div className="p-6 rounded-[2rem] bg-slate-50 border border-slate-100 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100/50 rounded-full blur-2xl -mr-12 -mt-12 transition-transform group-hover:scale-125"></div>
+              <div className="relative">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Account Status</p>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center shadow-sm border border-slate-100">
+                    <User className="h-5 w-5 text-slate-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-900 truncate max-w-[120px]">{user.displayName || 'User'}</p>
+                    <p className={`text-[10px] font-bold ${user.subscriptionPlan === 'pro' ? 'text-blue-500' : 'text-slate-400'}`}>
+                      {user.subscriptionPlan === 'pro' 
+                        ? (user.activePlanId === 'max' ? 'ListingAI Max' : 
+                           user.activePlanId === 'monthly' ? 'Monthly Pro' :
+                           user.activePlanId === 'half-yearly' ? '6 Month Pro' :
+                           user.activePlanId === 'yearly' ? 'Yearly Pro' : 'Pro Plan')
+                        : 'Free Plan'}
+                    </p>
+                  </div>
                 </div>
-                <img
-                  className="h-10 w-10 rounded-full bg-slate-50 ring-2 ring-white shadow-sm"
-                  src={user.photoURL || `https://ui-avatars.com/api/?name=${user.email}&background=2563eb&color=fff`}
-                  alt=""
-                />
+                <button 
+                  onClick={handleLogout}
+                  className="w-full py-2.5 rounded-xl bg-white border border-slate-200 text-red-500 font-black text-[10px] uppercase tracking-widest hover:bg-red-50 hover:border-red-100 transition-all shadow-sm"
+                >
+                  Sign Out
+                </button>
               </div>
+            </div>
+          </div>
+        </nav>
+
+        {/* Bottom Section */}
+        <div className="p-8">
+          <div className="rounded-3xl bg-slate-900 p-6 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-blue-600 rounded-full blur-2xl -mr-10 -mt-10 opacity-50"></div>
+            <div className="relative">
+              <div className="flex items-center gap-2 text-blue-400 mb-3">
+                <ShieldCheck className="h-4 w-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Admin Access</span>
+              </div>
+              <div className="text-3xl font-black tracking-[0.2em] font-display">
+                992403
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
+        {/* Header */}
+        <header className="flex h-24 flex-shrink-0 items-center justify-between bg-white/80 backdrop-blur-xl border-b border-slate-100 px-10 relative z-20">
+          <div className="flex items-center gap-6">
+            <div className="h-10 w-px bg-slate-100 hidden lg:block"></div>
+            <h1 className="text-lg font-black text-slate-900 font-display tracking-tight">{activeTab}</h1>
+          </div>
+          
+          {/* Right Actions */}
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-50 border border-slate-100">
+              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">System Online</span>
+            </div>
+            
+            <div className="w-px h-8 bg-slate-100 mx-2"></div>
+            
+            <button className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95">
+              <MessageCircle className="h-4 w-4" />
+              Community
+            </button>
+            
+            <div className="h-12 w-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-sm font-black shadow-xl shadow-slate-900/10 ml-2 border-4 border-white">
+              {user.email ? user.email.substring(0, 2).toUpperCase() : 'JZ'}
             </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-7xl">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                {renderContent()}
-              </motion.div>
-            </AnimatePresence>
+        {/* Page Content */}
+        <div className="flex-1 overflow-y-auto bg-[#fcfdfe] relative">
+          {/* Decorative Background */}
+          <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-50/30 rounded-full blur-3xl -mr-40 -mt-40"></div>
+            <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-50/20 rounded-full blur-3xl -ml-20 -mb-20"></div>
           </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="h-full p-10"
+            >
+              {renderContent()}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
     </div>

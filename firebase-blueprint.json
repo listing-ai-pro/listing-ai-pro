@@ -10,6 +10,8 @@
         "displayName": { "type": "string", "description": "User display name" },
         "role": { "type": "string", "enum": ["user", "admin"], "description": "User role" },
         "subscriptionPlan": { "type": "string", "enum": ["free", "pro"], "description": "Subscription plan" },
+        "activePlanId": { "type": "string", "description": "ID of the active subscription plan" },
+        "subscriptionDate": { "type": "string", "format": "date-time", "description": "Date when the subscription was activated" },
         "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
       },
       "required": ["uid", "email", "role", "subscriptionPlan", "createdAt"]
@@ -22,9 +24,13 @@
         "userId": { "type": "string", "description": "User ID" },
         "date": { "type": "string", "format": "date", "description": "Date" },
         "listingsGenerated": { "type": "number", "description": "Number of listings generated" },
-        "imagesGenerated": { "type": "number", "description": "Number of images generated" }
+        "whiteBackgrounds": { "type": "number", "description": "Number of white backgrounds generated" },
+        "marketAnalysis": { "type": "number", "description": "Number of market analysis generated" },
+        "aplusGenerated": { "type": "number", "description": "Number of A+ content generated" },
+        "photoshoots": { "type": "number", "description": "Number of AI photoshoots generated" },
+        "shippingOptimizations": { "type": "number", "description": "Number of shipping optimizations performed" }
       },
-      "required": ["userId", "date", "listingsGenerated", "imagesGenerated"]
+      "required": ["userId", "date", "listingsGenerated", "whiteBackgrounds", "marketAnalysis", "aplusGenerated", "photoshoots", "shippingOptimizations"]
     }
   },
   "firestore": {

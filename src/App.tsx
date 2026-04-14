@@ -4,58 +4,80 @@
  */
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { authPromise } from './firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, db } from './firebase';
 import Auth from './components/Auth';
 import Layout from './components/Layout';
-
-const AUTHORIZED_DOMAINS = ['localhost', '127.0.0.1', 'ais-dev-f3cymepfhmrkugch3kw2nr-104108217777.asia-east1.run.app', 'ais-pre-f3cymepfhmrkugch3kw2nr-104108217777.asia-east1.run.app'];
+import LandingPage from './components/LandingPage';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isAuthorizedDomain, setIsAuthorizedDomain] = useState(true);
 
   useEffect(() => {
-    const currentDomain = window.location.hostname;
-    if (!AUTHORIZED_DOMAINS.includes(currentDomain) && !currentDomain.endsWith('.run.app')) {
-      setIsAuthorizedDomain(false);
-      setLoading(false);
-      return;
-    }
-
-    async function initAuth() {
-      const auth = await authPromise;
-      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (!currentUser) {
+        setUserProfile(null);
         setLoading(false);
-      });
-      return unsubscribe;
-    }
-    initAuth();
+      }
+    });
+
+    return () => unsubscribeAuth();
   }, []);
 
-  if (!isAuthorizedDomain) {
+  useEffect(() => {
+    if (user) {
+      setLoading(true);
+      const unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+        if (doc.exists()) {
+          setUserProfile(doc.data());
+        } else {
+          // Profile might not exist yet if it's a new user
+          // Auth component handles creation, but we should handle the transition
+          setUserProfile(null);
+        }
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching user profile:", error);
+        setLoading(false);
+      });
+      return () => unsubscribeProfile();
+    }
+  }, [user]);
+
+  if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h2>
-          <p className="text-gray-600">This application is not authorized to run on this domain.</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#fcfdfe]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Initializing ListingAI</p>
         </div>
       </div>
     );
   }
 
-  if (loading) {
-    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
+  if (!user) {
+    return <LandingPage />;
   }
 
-  if (!user) {
-    return <Auth />;
+  // If user is logged in but profile doesn't exist yet, show a small loading state
+  // or wait for Auth component to finish its work. 
+  // Usually Auth component redirects/updates state.
+  if (!userProfile) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#fcfdfe]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Setting up your profile...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <Layout user={user}>
-      {/* Content is managed by Layout component */}
+    <Layout user={{ ...user, ...userProfile }}>
       <div />
     </Layout>
   );

@@ -1,17 +1,27 @@
 import { doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
-import { dbPromise, authPromise } from '../firebase';
+import { db, auth } from '../firebase';
 import { handleFirestoreError, OperationType } from './firestore-errors';
 
-export async function checkLimit(userId: string, type: 'listingsGenerated' | 'imagesGenerated' | 'marketAnalysis' | 'aplusGenerated', limit: number): Promise<boolean> {
+export type UsageType = 'listingsGenerated' | 'whiteBackgrounds' | 'marketAnalysis' | 'aplusGenerated' | 'photoshoots' | 'shippingOptimizations';
+
+export const USAGE_LIMITS: Record<UsageType, number> = {
+  listingsGenerated: 20,
+  whiteBackgrounds: 5,
+  marketAnalysis: 10,
+  aplusGenerated: 5,
+  photoshoots: 4,
+  shippingOptimizations: 5
+};
+
+export async function checkLimit(userId: string, type: UsageType): Promise<boolean> {
   const date = new Date().toISOString().split('T')[0];
   const path = `users/${userId}/daily_stats/${date}`;
   try {
-    const db = await dbPromise;
     const statsRef = doc(db, path);
     const docSnap = await getDoc(statsRef);
     if (docSnap.exists()) {
       const data = docSnap.data();
-      return (data[type] || 0) < limit;
+      return (data[type] || 0) < USAGE_LIMITS[type];
     }
     return true;
   } catch (error) {
@@ -20,12 +30,11 @@ export async function checkLimit(userId: string, type: 'listingsGenerated' | 'im
   }
 }
 
-export async function trackUsage(userId: string, type: 'listingsGenerated' | 'imagesGenerated' | 'marketAnalysis' | 'aplusGenerated') {
+export async function trackUsage(userId: string, type: UsageType) {
   const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   const path = `users/${userId}/daily_stats/${date}`;
   
   try {
-    const db = await dbPromise;
     const statsRef = doc(db, path);
     const docSnap = await getDoc(statsRef);
     if (docSnap.exists()) {
@@ -37,13 +46,14 @@ export async function trackUsage(userId: string, type: 'listingsGenerated' | 'im
         userId,
         date,
         listingsGenerated: type === 'listingsGenerated' ? 1 : 0,
-        imagesGenerated: type === 'imagesGenerated' ? 1 : 0,
+        whiteBackgrounds: type === 'whiteBackgrounds' ? 1 : 0,
         marketAnalysis: type === 'marketAnalysis' ? 1 : 0,
         aplusGenerated: type === 'aplusGenerated' ? 1 : 0,
+        photoshoots: type === 'photoshoots' ? 1 : 0,
+        shippingOptimizations: type === 'shippingOptimizations' ? 1 : 0,
       });
     }
   } catch (error) {
-    const auth = await authPromise;
     handleFirestoreError(error, OperationType.WRITE, path, auth);
   }
 }
