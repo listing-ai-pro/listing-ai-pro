@@ -6,10 +6,34 @@ import { db } from '../firebase';
 
 const plans = [
   {
+    id: 'trial',
+    name: 'Free Trial',
+    subtitle: 'Test the waters',
+    price: '0',
+    perDay: '0',
+    period: '2 days',
+    duration: '2 DAYS ACCESS',
+    icon: Sparkles,
+    color: 'from-slate-400 to-slate-600',
+    bgColor: 'bg-slate-500/10',
+    textColor: 'text-slate-500',
+    features: [
+      '20 Listings / Day',
+      '5 White Backgrounds / Day',
+      '10 Competitor Analysis / Day',
+      '5 A+ Content / Day',
+      'All Marketplaces',
+      'SEO Score Analysis',
+      '❌ No AI Photoshoot',
+      '❌ No Low Shipping Tool'
+    ]
+  },
+  {
     id: 'max',
     name: 'ListingAI Max',
     subtitle: 'Ultimate testing plan',
     price: '99',
+    perDay: '33',
     period: 'one-time',
     duration: '3 DAYS ACCESS',
     icon: Crown,
@@ -32,6 +56,7 @@ const plans = [
     name: '1 Month',
     subtitle: 'Casual sellers',
     price: '499',
+    perDay: '16',
     period: 'month',
     duration: '30 DAYS ACCESS',
     icon: Zap,
@@ -54,6 +79,7 @@ const plans = [
     name: '6 Month',
     subtitle: 'Power sellers',
     price: '1,499',
+    perDay: '8',
     period: '6 months',
     duration: '180 DAYS ACCESS',
     icon: Calendar,
@@ -76,6 +102,7 @@ const plans = [
     name: '1 Year',
     subtitle: 'Active sellers',
     price: '1,999',
+    perDay: '5',
     period: 'year',
     duration: '365 DAYS ACCESS',
     icon: Star,
@@ -194,7 +221,12 @@ export default function Subscription({ user }: { user: any }) {
                   <span className="text-4xl font-black text-slate-900">₹{plan.price}</span>
                   <span className="text-slate-400 font-bold text-sm">/{plan.period}</span>
                 </div>
-                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-2">{plan.duration}</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
+                    Only ₹{plan.perDay}/Day
+                  </span>
+                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{plan.duration}</p>
+                </div>
               </div>
 
               <div className="space-y-4 mb-10 flex-1">

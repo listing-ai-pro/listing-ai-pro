@@ -15,8 +15,10 @@ export default function Auth() {
       const userDoc = await getDoc(userRef);
 
       if (!userDoc.exists()) {
+        const sellerId = `SID-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
         await setDoc(userRef, {
           uid: user.uid,
+          sellerId,
           email: user.email,
           displayName: user.displayName,
           role: 'user',

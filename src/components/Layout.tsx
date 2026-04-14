@@ -8,10 +8,12 @@ import MarketIntelligence from './MarketIntelligence';
 import AIPhotoStudio from './AIPhotoStudio';
 import WhiteBackground from './WhiteBackground';
 import Dashboard from './Dashboard';
+import UserDashboard from './UserDashboard';
 import APlusContentGenerator from './APlusContentGenerator';
 import AdminPanel from './AdminPanel';
 import MeeshoShippingOptimizer from './MeeshoShippingOptimizer';
 import Subscription from './Subscription';
+import AdminMessageOverlay from './AdminMessageOverlay';
 
 export default function Layout({ children, user }: { children: React.ReactNode, user: any }) {
   const [activeTab, setActiveTab] = useState('Dashboard');
@@ -35,7 +37,7 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
   const renderContent = () => {
     switch (activeTab) {
       case 'Dashboard':
-        return <Dashboard />;
+        return <UserDashboard user={user} onTabChange={setActiveTab} />;
       case 'Listing Generator':
         return <ListingGenerator user={user} />;
       case 'White Background':
@@ -149,10 +151,10 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
             <div className="relative">
               <div className="flex items-center gap-2 text-blue-400 mb-3">
                 <ShieldCheck className="h-4 w-4" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Admin Access</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Seller ID</span>
               </div>
-              <div className="text-3xl font-black tracking-[0.2em] font-display">
-                992403
+              <div className="text-2xl font-black tracking-[0.1em] font-display uppercase">
+                {user.uid ? user.uid.substring(0, 8) : 'LAI-882'}
               </div>
             </div>
           </div>
@@ -210,6 +212,7 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
           </AnimatePresence>
         </div>
       </main>
+      <AdminMessageOverlay user={user} />
     </div>
   );
 }

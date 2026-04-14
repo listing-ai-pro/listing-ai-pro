@@ -60,9 +60,9 @@ const AIDemoAnimation = () => {
   }, [step]);
 
   return (
-    <div className="w-full max-w-5xl mx-auto bg-[#0a0c10] rounded-[2.5rem] border border-slate-800 shadow-2xl overflow-hidden font-sans text-left">
+    <div className="w-full max-w-4xl mx-auto bg-[#0a0c10] rounded-[2rem] border border-slate-800 shadow-2xl overflow-hidden font-sans text-left">
       {/* Browser Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#0d1117]">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-[#0d1117]">
         <div className="flex gap-2">
           <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/40"></div>
           <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/40"></div>
@@ -78,61 +78,49 @@ const AIDemoAnimation = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-800">
         {/* Left: Input */}
-        <div className="p-8 lg:p-12 border-r border-slate-800 bg-[#0a0c10]">
-          <div className="space-y-6">
-            <div className="flex items-center gap-2 text-slate-500">
-              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Input Image</span>
+        <div className="p-5 md:p-6 lg:p-8 bg-[#0a0c10]">
+          <div className="space-y-4 md:space-y-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-slate-500">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Step 1: Input Image</span>
+              </div>
+              <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest bg-slate-900 px-2 py-1 rounded-md">Raw Photo</span>
             </div>
             
-            <div className="relative aspect-square rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center group">
-              <AnimatePresence mode="wait">
-                {step === 0 ? (
-                  <motion.div 
-                    key="upload"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.1 }}
-                    className="flex flex-col items-center gap-4"
-                  >
-                    <div className="w-20 h-20 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-                      <Package className="h-10 w-10" />
-                    </div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Uploading Product...</p>
-                  </motion.div>
-                ) : (
-                  <motion.img 
-                    key="product"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    src="https://picsum.photos/seed/blouse-embroidered/800/800"
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                )}
-              </AnimatePresence>
+            <div className="relative aspect-square rounded-xl md:rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center group shadow-2xl max-w-[320px] mx-auto">
+              <img 
+                key="product"
+                src="https://www.dropbox.com/scl/fi/xgkm1coqy0to4ytpwil63/1.jpeg?rlkey=q2iyu5xtcfn27nknu582zxxdk&st=zfrbbvfl&dl=1"
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+                alt="Product"
+              />
+              
+              <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
               
               {step === 1 && (
                 <motion.div 
                   initial={{ top: "-10%" }}
                   animate={{ top: "110%" }}
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent shadow-[0_0_20px_rgba(59,130,246,0.5)] z-10"
+                  className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent shadow-[0_0_20px_rgba(59,130,246,0.8)] z-10"
                 />
               )}
             </div>
+            <p className="text-[10px] font-bold text-slate-500 text-center italic">"Aapki simple photo ko AI professional banayega"</p>
           </div>
         </div>
 
         {/* Right: Output */}
-        <div className="p-8 lg:p-12 bg-[#0d1117] overflow-y-auto max-h-[600px] hide-scrollbar">
-          <div className="space-y-8">
+        <div className="p-5 md:p-6 lg:p-8 bg-[#0d1117]">
+          <div className="space-y-5 md:space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-slate-500">
                 <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">AI Output</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Step 2: AI Transformation</span>
               </div>
               <div className="px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[8px] font-black uppercase tracking-widest">
                 Meesho Optimized
@@ -158,15 +146,15 @@ const AIDemoAnimation = () => {
             <div className="space-y-6">
               <div className="space-y-2">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Optimized Title</p>
-                <div className="min-h-[3rem] bg-slate-900/50 rounded-xl border border-slate-800 p-3 overflow-hidden">
+                <div className="min-h-[3.5rem] bg-slate-900/50 rounded-xl border border-slate-800 p-3 overflow-hidden">
                   <AnimatePresence mode="wait">
                     {step >= 2 ? (
                       <motion.p 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-xs font-bold text-slate-200 leading-relaxed"
+                        className="text-[11px] md:text-xs font-bold text-slate-200 leading-relaxed"
                       >
-                        Premium Embroidered Phantom Silk Blouse — Heavy Work Designer Wear
+                        Premium Multi-Color Embroidered Blouse — Heavy Designer Work with Latkans
                       </motion.p>
                     ) : (
                       <div className="flex gap-1">
@@ -183,9 +171,10 @@ const AIDemoAnimation = () => {
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Key Features</p>
                 <div className="space-y-2">
                   {[
-                    "Heavy Multi-Color Embroidery — Premium Finish",
-                    "Phantom Silk Fabric — Elegant & Comfortable",
-                    "Designer Back Pattern with Latkans"
+                    "Intricate Multi-Color Paisley & Floral Embroidery",
+                    "Premium Phantom Silk Fabric with Soft Lining",
+                    "Stylish Back Tie-Up with Heavy Latkans",
+                    "Perfect for Weddings & Festive Occasions"
                   ].map((f, i) => (
                     <motion.div 
                       key={i}
@@ -194,8 +183,8 @@ const AIDemoAnimation = () => {
                       transition={{ delay: i * 0.2 }}
                       className="flex items-center gap-3 text-[10px] font-bold text-slate-400"
                     >
-                      <CheckCircle className="h-3 w-3 text-emerald-500" />
-                      {f}
+                      <CheckCircle className="h-3 w-3 text-emerald-500 shrink-0" />
+                      <span className="line-clamp-1">{f}</span>
                     </motion.div>
                   ))}
                 </div>
@@ -203,14 +192,14 @@ const AIDemoAnimation = () => {
 
               <div className="space-y-2">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Keywords</p>
-                <div className="flex flex-wrap gap-2">
-                  {["embroidered blouse", "designer blouse", "phantom silk", "meesho blouse"].map((k, i) => (
+                <div className="flex flex-wrap gap-1.5">
+                  {["embroidered blouse", "designer blouse", "black blouse", "heavy work blouse", "meesho ethnic wear"].map((k, i) => (
                     <motion.span 
                       key={i}
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={step >= 3 ? { opacity: 1, scale: 1 } : { opacity: 0 }}
                       transition={{ delay: i * 0.1 }}
-                      className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[9px] font-bold text-slate-500"
+                      className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[9px] font-bold text-slate-500"
                     >
                       {k}
                     </motion.span>
@@ -219,30 +208,35 @@ const AIDemoAnimation = () => {
               </div>
 
               {/* AI Product Images (Model Transformation) */}
-              <div className="space-y-3 pt-4 border-t border-slate-800">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">AI Product Images</p>
-                <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-4 pt-6 border-t border-slate-800">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">AI Product Images</p>
+                  <div className="flex items-center gap-1 text-[8px] font-black text-blue-400 uppercase tracking-widest">
+                    <Sparkles className="h-2 w-2" />
+                    Model Generated
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:gap-4">
                   {[
-                    { label: 'Lifestyle', seed: 'fashion-model-blouse' },
-                    { label: 'Studio', seed: 'studio-wear' }
+                    { label: 'AI Generated Model Shot', url: 'https://www.dropbox.com/scl/fi/knsoj2rvf23rjrknjkijn/2.jpg?rlkey=4j8uidyhhjsjgnbcfea9tmkdd&st=9seaqwdw&dl=1' }
                   ].map((img, i) => (
-                    <motion.div 
+                    <div 
                       key={i}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={step >= 3 ? { opacity: 1, y: 0 } : { opacity: 0 }}
-                      transition={{ delay: 0.5 + (i * 0.2) }}
-                      className="relative aspect-[3/4] rounded-xl bg-slate-900 border border-slate-800 overflow-hidden group"
+                      className="relative aspect-[3/4] rounded-xl md:rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden group shadow-xl max-w-[300px]"
                     >
                       <img 
-                        src={`https://picsum.photos/seed/${img.seed}/400/533`}
-                        className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                        src={img.url}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         referrerPolicy="no-referrer"
                         alt={img.label}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent flex items-end p-3">
-                        <span className="text-[8px] font-black text-white uppercase tracking-widest">{img.label}</span>
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent flex items-end p-3 md:p-4">
+                        <div className="space-y-1">
+                          <span className="text-[8px] font-black text-white uppercase tracking-[0.2em]">{img.label}</span>
+                          <div className="h-0.5 w-4 bg-blue-500 rounded-full"></div>
+                        </div>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -365,10 +359,10 @@ export default function Dashboard() {
         <motion.section variants={itemVariants} className="space-y-12 px-4 text-center">
           <div className="space-y-4">
             <h2 className="text-3xl md:text-5xl font-black text-slate-900 font-display">
-              Watch AI Create Your <span className="text-blue-600">Listing</span>
+              Watch AI Create Your <span className="text-blue-600">Listing</span> ✨
             </h2>
             <p className="text-lg font-medium text-slate-500 max-w-2xl mx-auto">
-              Real-time demo — no signup needed. See how ListingAI transforms product images into marketplace-ready listings.
+              Real-time demo — See how ListingAI transforms your simple product photos into professional marketplace listings and model shots.
             </p>
           </div>
           
@@ -387,44 +381,44 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-slate-900 rounded-[3rem] p-10 md:p-12 border border-slate-800 relative overflow-hidden group">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+            <div className="bg-slate-900 rounded-[2rem] md:rounded-[3rem] p-8 md:p-12 border border-slate-800 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-red-500 rounded-full blur-[100px] -mr-16 -mt-16 opacity-10"></div>
-              <h3 className="text-[10px] font-black text-red-500 uppercase tracking-[0.3em] mb-10 flex items-center gap-2">
+              <h3 className="text-[10px] font-black text-red-500 uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500"></div>
                 The Seller's Struggle
               </h3>
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {[
-                  "Writing SEO-friendly titles and descriptions manually",
-                  "Understanding each platform's specific content requirements",
-                  "Maintaining listing quality and consistency at scale",
-                  "Spending excessive time on repetitive cataloging work"
+                  "Writing SEO-friendly titles manually",
+                  "Understanding platform requirements",
+                  "Maintaining quality at scale",
+                  "Spending hours on cataloging"
                 ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-4">
-                    <XCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-                    <p className="text-sm font-bold text-slate-400 leading-relaxed">{item}</p>
+                  <div key={i} className="flex items-start gap-3">
+                    <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                    <p className="text-xs md:text-sm font-bold text-slate-400 leading-relaxed">{item}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="bg-white rounded-[3rem] p-10 md:p-12 border border-slate-100 shadow-2xl relative overflow-hidden group">
+            <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-8 md:p-12 border border-slate-100 shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-[100px] -mr-16 -mt-16 opacity-10"></div>
-              <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em] mb-10 flex items-center gap-2">
+              <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                 The ListingAI Edge
               </h3>
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {[
-                  "SEO-optimized titles tailored per marketplace",
-                  "Platform-compliant bullet points and descriptions",
-                  "Keyword-rich content generated automatically",
-                  "Category and tag suggestions included"
+                  "SEO-optimized titles per marketplace",
+                  "Platform-compliant bullet points",
+                  "Keyword-rich content automatically",
+                  "Category and tag suggestions"
                 ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-4">
-                    <CheckCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-                    <p className="text-sm font-bold text-slate-700 leading-relaxed">{item}</p>
+                  <div key={i} className="flex items-start gap-3">
+                    <CheckCircle className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                    <p className="text-xs md:text-sm font-bold text-slate-700 leading-relaxed">{item}</p>
                   </div>
                 ))}
               </div>
@@ -433,54 +427,54 @@ export default function Dashboard() {
         </motion.section>
 
         {/* 2. PROBLEM SECTION */}
-        <motion.section variants={itemVariants} className="bg-red-50 rounded-[3rem] p-10 md:p-16 border border-red-100">
-          <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-10 text-center font-display">
+        <motion.section variants={itemVariants} className="bg-red-50 rounded-[2rem] md:rounded-[3rem] p-8 md:p-16 border border-red-100">
+          <h2 className="text-xl md:text-3xl font-black text-slate-900 mb-8 md:mb-10 text-center font-display leading-tight">
             Kya Aapka Profit Shipping Mein Ja Raha Hai? 🤔
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             {[
               { icon: Truck, title: "High Shipping Cost", desc: "Weight zyada hone ki wajah se shipping charges profit kha rahe hain." },
               { icon: Search, title: "Low Visibility", desc: "Aapki listing Meesho search mein upar nahi aa rahi? SEO ki kami hai." },
               { icon: BarChart3, title: "High RTO Rates", desc: "Galat packaging aur description ki wajah se returns zyada aa rahe hain." }
             ].map((p, i) => (
-              <div key={i} className="bg-white p-8 rounded-3xl shadow-sm space-y-4">
-                <div className="h-12 w-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
-                  <p.icon className="h-6 w-6" />
+              <div key={i} className="bg-white p-6 md:p-8 rounded-2xl md:rounded-3xl shadow-sm space-y-3 md:space-y-4">
+                <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
+                  <p.icon className="h-5 w-5 md:h-6 md:w-6" />
                 </div>
-                <h4 className="text-lg font-black text-slate-900">{p.title}</h4>
-                <p className="text-sm font-medium text-slate-500 leading-relaxed">{p.desc}</p>
+                <h4 className="text-base md:text-lg font-black text-slate-900">{p.title}</h4>
+                <p className="text-xs md:text-sm font-medium text-slate-500 leading-relaxed">{p.desc}</p>
               </div>
             ))}
           </div>
-          <p className="text-center mt-10 text-red-600 font-bold italic">
+          <p className="text-center mt-8 md:mt-10 text-red-600 font-bold italic text-sm md:text-base px-4">
             "Meesho pe wahi jeet-ta hai jiska shipping rate sabse kam aur SEO sabse best hota hai!"
           </p>
         </motion.section>
 
         {/* 3. SOLUTION SECTION */}
-        <motion.section variants={itemVariants} className="text-center space-y-8 px-4">
-          <h2 className="text-3xl md:text-4xl font-black text-slate-900 font-display">
+        <motion.section variants={itemVariants} className="text-center space-y-6 md:space-y-8 px-4">
+          <h2 className="text-2xl md:text-4xl font-black text-slate-900 font-display leading-tight">
             ListingAI: Meesho Sellers Ka Secret Weapon ⚡
           </h2>
-          <p className="text-lg font-medium text-slate-500 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-base md:text-lg font-medium text-slate-500 max-w-2xl mx-auto leading-relaxed">
             Hamara AI tool aapke product ka perfect weight calculate karta hai aur aisi SEO optimized listing banata hai jo Meesho algorithm ko pasand aaye. Kam shipping = More Orders!
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-blue-600 rounded-[2.5rem] p-10 text-white text-left space-y-4 shadow-xl relative overflow-hidden group">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+            <div className="bg-blue-600 rounded-[2rem] md:rounded-[2.5rem] p-8 md:p-10 text-white text-left space-y-4 shadow-xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150"></div>
-              <Package className="h-10 w-10 text-blue-200" />
-              <h4 className="text-xl font-black">Low Shipping Tool</h4>
-              <p className="text-sm font-medium text-blue-100 leading-relaxed">
+              <Package className="h-8 w-8 md:h-10 md:w-10 text-blue-200" />
+              <h4 className="text-lg md:text-xl font-black">Low Shipping Tool</h4>
+              <p className="text-xs md:text-sm font-medium text-blue-100 leading-relaxed">
                 Packaging optimize karke weight category kam karein aur shipping charges pe 30-40% bachayein.
               </p>
             </div>
-            <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white text-left space-y-4 shadow-xl relative overflow-hidden border-2 border-emerald-500/30 group">
+            <div className="bg-slate-900 rounded-[2rem] md:rounded-[2.5rem] p-8 md:p-10 text-white text-left space-y-4 shadow-xl relative overflow-hidden border-2 border-emerald-500/30 group">
               <div className="absolute top-4 right-4 bg-emerald-500 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-bounce">
                 Most Popular 🔥
               </div>
-              <FileText className="h-10 w-10 text-emerald-400" />
-              <h4 className="text-xl font-black text-emerald-400">SEO Listing Generator</h4>
-              <p className="text-sm font-medium text-slate-400 leading-relaxed">
+              <FileText className="h-8 w-8 md:h-10 md:w-10 text-emerald-400" />
+              <h4 className="text-lg md:text-xl font-black text-emerald-400">SEO Listing Generator</h4>
+              <p className="text-xs md:text-sm font-medium text-slate-400 leading-relaxed">
                 Aise keywords jo Meesho pe search hote hain. Title aur description jo customer ko click karne pe majboor karde.
               </p>
               <div className="flex items-center gap-2 text-emerald-400 text-[10px] font-black uppercase tracking-widest">
@@ -492,11 +486,11 @@ export default function Dashboard() {
         </motion.section>
 
         {/* NEW: GROWTH VISUALIZATION SECTION */}
-        <motion.section variants={itemVariants} className="space-y-10 px-4">
-          <div className="bg-white rounded-[3.5rem] p-10 md:p-16 border border-slate-100 shadow-2xl space-y-12">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl md:text-4xl font-black text-slate-900 font-display">Orders Growth Dekhiye! 📈</h2>
-              <p className="text-lg font-medium text-slate-500">SEO Listing update karne ke baad orders aise badhte hain.</p>
+        <motion.section variants={itemVariants} className="space-y-8 md:space-y-10 px-4">
+          <div className="bg-white rounded-[2.5rem] md:rounded-[3.5rem] p-8 md:p-16 border border-slate-100 shadow-2xl space-y-8 md:space-y-12">
+            <div className="text-center space-y-3 md:space-y-4">
+              <h2 className="text-2xl md:text-4xl font-black text-slate-900 font-display leading-tight">Orders Growth Dekhiye! 📈</h2>
+              <p className="text-base md:text-lg font-medium text-slate-500">SEO Listing update karne ke baad orders aise badhte hain.</p>
             </div>
 
             <div className="h-[300px] w-full">

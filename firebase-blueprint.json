@@ -6,6 +6,7 @@
       "type": "object",
       "properties": {
         "uid": { "type": "string", "description": "User ID" },
+        "sellerId": { "type": "string", "description": "Unique Seller ID" },
         "email": { "type": "string", "format": "email", "description": "User email" },
         "displayName": { "type": "string", "description": "User display name" },
         "role": { "type": "string", "enum": ["user", "admin"], "description": "User role" },
@@ -15,6 +16,18 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
       },
       "required": ["uid", "email", "role", "subscriptionPlan", "createdAt"]
+    },
+    "AdminMsg": {
+      "title": "AdminMsg",
+      "description": "Broadcast messages from admin",
+      "type": "object",
+      "properties": {
+        "content": { "type": "string", "description": "Message content" },
+        "target": { "type": "string", "enum": ["ALL", "PRO", "TRIAL"], "description": "Target audience" },
+        "active": { "type": "boolean", "description": "Whether the message is active" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["content", "target", "active", "createdAt"]
     },
     "DailyStats": {
       "title": "DailyStats",
@@ -41,6 +54,10 @@
     "/users/{userId}/daily_stats/{date}": {
       "schema": "DailyStats",
       "description": "Daily usage statistics"
+    },
+    "/AdminMsg/{msgId}": {
+      "schema": "AdminMsg",
+      "description": "Admin broadcast messages"
     }
   }
 }

@@ -33,6 +33,7 @@ service cloud.firestore {
              data.role in ['user', 'admin'] &&
              data.subscriptionPlan in ['free', 'pro'] &&
              data.createdAt is timestamp &&
+             (!('sellerId' in data) || (data.sellerId is string && data.sellerId.size() < 32)) &&
              (!('activePlanId' in data) || data.activePlanId is string) &&
              (!('subscriptionDate' in data) || data.subscriptionDate is timestamp) &&
              (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 128));
@@ -50,15 +51,23 @@ service cloud.firestore {
              data.shippingOptimizations is number && data.shippingOptimizations >= 0 && data.shippingOptimizations <= 5;
     }
 
+    function isValidAdminMsg(data) {
+      return data.keys().hasAll(['content', 'target', 'active', 'createdAt']) &&
+             data.content is string && data.content.size() < 5000 &&
+             data.target in ['ALL', 'PRO', 'TRIAL'] &&
+             data.active is bool &&
+             data.createdAt is timestamp;
+    }
+
     // ===============================================================
     // Collections
     // ===============================================================
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
-      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+      allow update: if isAdmin() || (isOwner(userId) && isValidUser(request.resource.data) && 
                     request.resource.data.uid == resource.data.uid &&
-                    (request.resource.data.role == resource.data.role || isAdmin());
+                    request.resource.data.role == resource.data.role);
     }
 
     match /users/{userId}/daily_stats/{date} {
@@ -67,6 +76,11 @@ service cloud.firestore {
       allow update: if isOwner(userId) && isValidDailyStats(request.resource.data) &&
                     request.resource.data.userId == resource.data.userId &&
                     request.resource.data.date == resource.data.date;
+    }
+
+    match /AdminMsg/{msgId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidAdminMsg(request.resource.data);
     }
   }
 }
