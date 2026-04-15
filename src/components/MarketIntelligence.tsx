@@ -78,7 +78,7 @@ export default function MarketIntelligence({ user }: { user: any }) {
 
       const data = await generateGeminiContent({
         prompt: systemPrompt + `\n\nQuery: ${query}`,
-        modelName: 'gemini-1.5-flash',
+        modelName: 'gemini-3-flash-preview',
         useSearch: true
       });
       

@@ -29,7 +29,7 @@ export default function APlusContentGenerator({ user }: { user: any }) {
 
       const data = await generateGeminiContent({
         prompt: `Generate A+ content modules for a product: ${product}. Return ONLY a valid JSON object with this exact structure: { "headline": "string", "modules": [{ "name": "string", "layout": "string", "content": "string", "imagePrompt": "string" }] }`,
-        modelName: 'gemini-1.5-flash'
+        modelName: 'gemini-3-flash-preview'
       });
       
       setRawText(data.text || '');

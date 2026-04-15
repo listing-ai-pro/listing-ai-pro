@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -6,7 +6,7 @@ if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
   console.warn('Gemini API Key is not configured or is using placeholder value.');
 }
 
-export const genAI = new GoogleGenerativeAI(apiKey || '');
+export const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 export async function generateGeminiContent(params: {
   prompt?: string;
@@ -16,37 +16,40 @@ export async function generateGeminiContent(params: {
 }) {
   const { prompt, contents, modelName, useSearch } = params;
   
-  // Use gemini-1.5-flash as the default stable model
-  let actualModelName = 'gemini-1.5-flash';
+  // Map model names to supported ones from @google/genai
+  let actualModelName = modelName || 'gemini-3-flash-preview';
   
-  if (modelName?.includes('pro')) {
-    actualModelName = 'gemini-1.5-pro';
+  // Ensure we don't use prohibited models
+  if (actualModelName.includes('1.5')) {
+    actualModelName = 'gemini-3-flash-preview';
+  }
+
+  // If it's an image task and no model specified, use image model
+  if (!modelName && contents?.parts?.some((p: any) => p.inlineData)) {
+    actualModelName = 'gemini-2.5-flash-image';
   }
 
   try {
-    const model = genAI.getGenerativeModel({ 
+    const response = await ai.models.generateContent({
       model: actualModelName,
-      tools: useSearch ? [{ googleSearch: {} }] : undefined,
-    } as any);
+      contents: contents || prompt,
+      config: {
+        systemInstruction: contents ? prompt : undefined,
+        tools: useSearch ? [{ googleSearch: {} }] : undefined,
+      }
+    });
 
-    let result;
-    if (contents) {
-      // If contents are provided (for multimodal/chat), use generateContent with parts
-      result = await model.generateContent(contents);
-    } else if (prompt) {
-      result = await model.generateContent(prompt);
-    } else {
-      throw new Error('No prompt or contents provided');
+    let image = null;
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          image = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+          break;
+        }
+      }
     }
 
-    const response = await result.response;
-    const text = response.text();
-    
-    let image = null;
-    // Note: Standard generateContent doesn't return images directly in the same way 
-    // as the experimental image models, but we keep the structure for compatibility.
-    
-    return { text, image };
+    return { text: response.text, image };
   } catch (error: any) {
     console.error('Gemini API Error:', error);
     if (error.message && error.message.includes('API key not valid')) {
