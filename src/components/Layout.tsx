@@ -28,7 +28,12 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
     { name: 'A+ Content', icon: BookOpen },
     { name: 'Subscription', icon: CreditCard },
     { name: 'Admin Dashboard', icon: ShieldCheck },
-  ];
+  ].filter(item => {
+    if (item.name === 'Admin Dashboard') {
+      return user.email === 'ezstall135@gmail.com';
+    }
+    return true;
+  });
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -53,7 +58,7 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
       case 'Subscription':
         return <Subscription user={user} />;
       case 'Admin Dashboard':
-        return <AdminPanel user={user} />;
+        return user.email === 'ezstall135@gmail.com' ? <AdminPanel user={user} /> : <UserDashboard user={user} onTabChange={setActiveTab} />;
       default:
         return children;
     }
