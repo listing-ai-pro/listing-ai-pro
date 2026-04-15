@@ -81,10 +81,9 @@ export default function WhiteBackground({ user }: { user: any }) {
         ]
       };
 
-      // Using gemini-2.5-flash-image for image processing
+      // Using Gemini 3 for image processing
       const response = await generateGeminiContent({
-        contents,
-        modelName: 'gemini-2.5-flash-image'
+        contents
       });
 
       if (response.image) {

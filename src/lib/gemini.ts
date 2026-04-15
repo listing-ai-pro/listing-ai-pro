@@ -16,17 +16,12 @@ export async function generateGeminiContent(params: {
 }) {
   const { prompt, contents, modelName, useSearch } = params;
   
-  // Map model names to supported ones from @google/genai
-  let actualModelName = modelName || 'gemini-3-flash-preview';
+  // Force use of gemini-3-flash-preview as it's the most reliable for free tier
+  let actualModelName = 'gemini-3-flash-preview';
   
-  // Ensure we don't use prohibited models
-  if (actualModelName.includes('1.5')) {
-    actualModelName = 'gemini-3-flash-preview';
-  }
-
-  // If it's an image task and no model specified, use image model
-  if (!modelName && contents?.parts?.some((p: any) => p.inlineData)) {
-    actualModelName = 'gemini-2.5-flash-image';
+  // Only override if explicitly pro is requested, but even then flash is safer
+  if (modelName?.includes('pro')) {
+    actualModelName = 'gemini-3.1-pro-preview';
   }
 
   try {
