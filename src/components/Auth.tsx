@@ -22,7 +22,10 @@ export default function Auth() {
           email: user.email,
           displayName: user.displayName,
           role: 'user',
-          subscriptionPlan: 'free',
+          subscriptionPlan: 'pro',
+          activePlanId: 'trial',
+          subscriptionDate: new Date(),
+          hasUsedTrial: true,
           createdAt: new Date()
         });
       }

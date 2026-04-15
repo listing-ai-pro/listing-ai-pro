@@ -30,6 +30,7 @@ import {
 } from 'recharts';
 import { useUsage } from '../hooks/useUsage';
 import { USAGE_LIMITS } from '../lib/usage';
+import { isPlanActive } from '../lib/subscription';
 import { collection, query, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -39,8 +40,12 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
   const [totalSaved, setTotalSaved] = useState(0);
 
   const isPro = user.subscriptionPlan === 'pro';
+  const isActive = isPlanActive(user);
 
   const getGrowthSuggestion = () => {
+    if (!isActive) {
+      return "Aapka plan expire ho gaya hai. Naya plan buy karein taaki aap tools use kar sakein.";
+    }
     if (usage.listingsGenerated < 5) {
       return "Aaj kam se kam 10 listings optimize karein taaki aapka search rank top pe aaye aur sales badhe.";
     }
@@ -94,6 +99,32 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
 
   return (
     <div className="max-w-7xl mx-auto space-y-10 pb-20">
+      {/* Expiration Banner */}
+      {!isActive && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-6 rounded-[2.5rem] bg-red-50 border border-red-100 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-red-500/5"
+        >
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+              <AlertCircle className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-red-400 mb-1">Subscription Expired</p>
+              <h4 className="text-lg font-black text-slate-900">Aapka plan khatam ho gaya hai! 🛑</h4>
+              <p className="text-sm font-medium text-slate-500">Tools use karne ke liye naya plan buy karein.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => onTabChange?.('Subscription')}
+            className="px-8 py-4 rounded-2xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/10"
+          >
+            Upgrade Now
+          </button>
+        </motion.div>
+      )}
+
       {/* 1. WELCOME & QUICK STATS */}
       <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <motion.div variants={itemVariants} className="lg:col-span-2 p-8 rounded-[2.5rem] bg-slate-900 text-white relative overflow-hidden group">
@@ -104,9 +135,9 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
                 <Zap className="h-5 w-5 fill-blue-400" />
                 <span className="text-[10px] font-black uppercase tracking-[0.3em]">Advanced Dashboard</span>
               </div>
-              <div className={`px-4 py-1.5 rounded-xl border flex items-center gap-2 ${isPro ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'}`}>
-                {isPro ? <Crown className="h-3 w-3 fill-emerald-400" /> : <Zap className="h-3 w-3" />}
-                <span className="text-[9px] font-black uppercase tracking-widest">{isPro ? 'Pro Member' : 'Free Plan'}</span>
+              <div className={`px-4 py-1.5 rounded-xl border flex items-center gap-2 ${!isActive ? 'bg-red-500/10 border-red-500/20 text-red-400' : isPro ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'}`}>
+                {!isActive ? <Lock className="h-3 w-3" /> : isPro ? <Crown className="h-3 w-3 fill-emerald-400" /> : <Zap className="h-3 w-3" />}
+                <span className="text-[9px] font-black uppercase tracking-widest">{!isActive ? 'Plan Expired' : isPro ? 'Pro Member' : 'Free Plan'}</span>
               </div>
             </div>
             <h2 className="text-3xl font-black font-display">Welcome back, {user.displayName?.split(' ')[0] || 'Seller'}! 👋</h2>

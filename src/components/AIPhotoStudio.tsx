@@ -3,15 +3,17 @@ import { trackUsage, checkLimit, USAGE_LIMITS } from '../lib/usage';
 import { useUsage } from '../hooks/useUsage';
 import { generateGeminiContent } from '../lib/gemini';
 import { compressImage } from '../lib/utils';
+import { isPlanActive } from '../lib/subscription';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Copy, Check, Camera, Loader2, UploadCloud, Image as ImageIcon, 
   AlertCircle, Sparkles, Zap, Box, Shirt, Monitor, 
-  ChevronRight, Settings2, Wand2, Palette, Layers, Download, User
+  ChevronRight, Settings2, Wand2, Palette, Layers, Download, User, Lock
 } from 'lucide-react';
 
 export default function AIPhotoStudio({ user }: { user: any }) {
   const { usage } = useUsage(user.uid);
+  const isActive = isPlanActive(user);
   const [mode, setMode] = useState<'APPAREL' | 'PRODUCT' | 'MOCKUP'>('APPAREL');
   const [activeTab, setActiveTab] = useState<'Model' | 'Apparel'>('Apparel');
   const [prompt, setPrompt] = useState('');
@@ -124,7 +126,38 @@ export default function AIPhotoStudio({ user }: { user: any }) {
   };
 
   return (
-    <div className="max-w-full mx-auto bg-[#0f172a] min-h-screen -m-10 p-10 font-sans selection:bg-blue-500/30">
+    <div className="max-w-full mx-auto bg-[#0f172a] min-h-screen -m-10 p-10 font-sans selection:bg-blue-500/30 relative">
+      {!isActive && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-[#0f172a]/80 backdrop-blur-md rounded-[3rem]">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="max-w-md w-full bg-[#1e293b] p-12 rounded-[3rem] shadow-2xl border border-slate-800 text-center space-y-8"
+          >
+            <div className="mx-auto h-20 w-20 rounded-[2rem] bg-red-500/10 flex items-center justify-center text-red-500 shadow-xl shadow-red-500/10">
+              <Lock className="h-10 w-10" />
+            </div>
+            <div className="space-y-4">
+              <h3 className="text-3xl font-black text-white font-display">Access Restricted</h3>
+              <p className="text-slate-400 font-medium leading-relaxed">
+                Aapka trial ya subscription khatam ho gaya hai. AI Photo Studio use karne ke liye naya plan buy karein.
+              </p>
+            </div>
+            <div className="pt-4">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6">Contact Admin on WhatsApp to Upgrade</p>
+              <a 
+                href="https://wa.me/919876543210?text=Hi, I want to upgrade my plan for ListingAI."
+                target="_blank"
+                rel="noreferrer"
+                className="block w-full py-5 rounded-2xl bg-blue-600 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20"
+              >
+                Upgrade Now
+              </a>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Top Toolbar */}
       <div className="bg-[#1e293b] rounded-3xl p-4 mb-8 flex items-center justify-between border border-slate-800 shadow-2xl">
         <div className="flex items-center gap-8">

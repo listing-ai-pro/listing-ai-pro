@@ -128,24 +128,34 @@ export default function Subscription({ user }: { user: any }) {
   const [success, setSuccess] = useState(false);
 
   const handleSubscribe = async (planId: string) => {
-    setLoading(planId);
-    try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    if (planId === 'trial') {
+      if (user.hasUsedTrial) {
+        alert("You have already used your free trial. Please purchase a plan to continue.");
+        return;
+      }
       
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        subscriptionPlan: 'pro',
-        activePlanId: planId,
-        subscriptionDate: serverTimestamp()
-      });
-      
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 5000);
-    } catch (error) {
-      console.error('Subscription failed:', error);
-    } finally {
-      setLoading(null);
+      setLoading(planId);
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          subscriptionPlan: 'pro',
+          activePlanId: planId,
+          subscriptionDate: serverTimestamp(),
+          hasUsedTrial: true
+        });
+        
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 5000);
+      } catch (error) {
+        console.error('Subscription failed:', error);
+      } finally {
+        setLoading(null);
+      }
+    } else {
+      // Redirect to WhatsApp for paid plans
+      const message = `Hi, I want to subscribe to the ${plans.find(p => p.id === planId)?.name} plan for ListingAI. My email is ${user.email}.`;
+      const whatsappUrl = `https://wa.me/919876543210?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
     }
   };
 
@@ -242,9 +252,9 @@ export default function Subscription({ user }: { user: any }) {
 
               <button
                 onClick={() => handleSubscribe(plan.id)}
-                disabled={loading !== null || (user.subscriptionPlan === 'pro' && user.activePlanId === plan.id)}
+                disabled={loading !== null || (user.subscriptionPlan === 'pro' && user.activePlanId === plan.id) || (plan.id === 'trial' && user.hasUsedTrial)}
                 className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden group/btn ${
-                  user.subscriptionPlan === 'pro' && user.activePlanId === plan.id
+                  (user.subscriptionPlan === 'pro' && user.activePlanId === plan.id) || (plan.id === 'trial' && user.hasUsedTrial)
                     ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                     : plan.popular
                     ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/20'
@@ -255,7 +265,15 @@ export default function Subscription({ user }: { user: any }) {
                   <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                 ) : (
                   <>
-                    <span>{user.subscriptionPlan === 'pro' && user.activePlanId === plan.id ? 'Active Plan' : 'Get Access'}</span>
+                    <span>
+                      {user.subscriptionPlan === 'pro' && user.activePlanId === plan.id 
+                        ? 'Active Plan' 
+                        : (plan.id === 'trial' && user.hasUsedTrial)
+                        ? 'Trial Used'
+                        : plan.id === 'trial' 
+                        ? 'Start Trial' 
+                        : 'Buy Plan'}
+                    </span>
                     <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
                   </>
                 )}

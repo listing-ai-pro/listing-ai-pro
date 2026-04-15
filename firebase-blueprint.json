@@ -14,6 +14,7 @@
         "activePlanId": { "type": "string", "description": "ID of the active subscription plan" },
         "subscriptionDate": { "type": "string", "format": "date-time", "description": "Date when the subscription was activated" },
         "seenMessageIds": { "type": "array", "items": { "type": "string" }, "description": "IDs of messages already seen by the user" },
+        "hasUsedTrial": { "type": "boolean", "description": "Whether the user has already used their free trial" },
         "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
       },
       "required": ["uid", "email", "role", "subscriptionPlan", "createdAt"]

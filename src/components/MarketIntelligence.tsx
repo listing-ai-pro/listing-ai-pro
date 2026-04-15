@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { trackUsage, checkLimit, USAGE_LIMITS } from '../lib/usage';
 import { useUsage } from '../hooks/useUsage';
 import { generateGeminiContent } from '../lib/gemini';
+import { isPlanActive } from '../lib/subscription';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, Loader2, Tag, Percent, TrendingUp, DollarSign, AlertCircle, 
   Target, Shield, Zap, Info, BarChart3, PieChart, ArrowUpRight, 
   CheckCircle2, XCircle, Lightbulb, ShieldAlert, TrendingDown,
-  ChevronRight, ExternalLink, Globe, Star
+  ChevronRight, ExternalLink, Globe, Star, Lock
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
@@ -16,6 +17,7 @@ import {
 
 export default function MarketIntelligence({ user }: { user: any }) {
   const { usage } = useUsage(user.uid);
+  const isActive = isPlanActive(user);
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -99,7 +101,38 @@ export default function MarketIntelligence({ user }: { user: any }) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-12">
+    <div className="max-w-7xl mx-auto space-y-12 relative">
+      {!isActive && (
+        <div className="absolute inset-0 z-[50] flex items-center justify-center p-6 bg-white/60 backdrop-blur-md rounded-[3rem]">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="max-w-md w-full bg-white p-12 rounded-[3rem] shadow-2xl border border-slate-100 text-center space-y-8"
+          >
+            <div className="mx-auto h-20 w-20 rounded-[2rem] bg-red-50 flex items-center justify-center text-red-600 shadow-xl shadow-red-500/10">
+              <Lock className="h-10 w-10" />
+            </div>
+            <div className="space-y-4">
+              <h3 className="text-3xl font-black text-slate-900 font-display">Access Restricted</h3>
+              <p className="text-slate-500 font-medium leading-relaxed">
+                Aapka trial ya subscription khatam ho gaya hai. Market intelligence use karne ke liye naya plan buy karein.
+              </p>
+            </div>
+            <div className="pt-4">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Contact Admin on WhatsApp to Upgrade</p>
+              <a 
+                href="https://wa.me/919876543210?text=Hi, I want to upgrade my plan for ListingAI."
+                target="_blank"
+                rel="noreferrer"
+                className="block w-full py-5 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/20"
+              >
+                Upgrade Now
+              </a>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="relative">
         <div className="max-w-3xl">

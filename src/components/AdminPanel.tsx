@@ -73,6 +73,30 @@ export default function AdminPanel({ user }: { user: any }) {
     return matchesSearch && matchesFilter;
   });
 
+  const handleResetTrial = async (userId: string) => {
+    setUpdatingPlan(true);
+    try {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        hasUsedTrial: false,
+        subscriptionPlan: 'free',
+        activePlanId: 'free',
+        subscriptionDate: null
+      });
+      setEditingUser(null);
+      // Refresh users list
+      const updatedUsers = users.map(u => 
+        u.id === userId ? { ...u, hasUsedTrial: false, subscriptionPlan: 'free', activePlanId: 'free' } : u
+      );
+      setUsers(updatedUsers);
+    } catch (error) {
+      console.error("Error resetting trial:", error);
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`, auth);
+    } finally {
+      setUpdatingPlan(false);
+    }
+  };
+
   const handleUpdatePlan = async (userId: string, plan: 'free' | 'pro', planId: string) => {
     setUpdatingPlan(true);
     try {
@@ -426,6 +450,7 @@ export default function AdminPanel({ user }: { user: any }) {
                     { id: 'trial', name: 'Free Trial (2 Days)', plan: 'pro', planId: 'trial', color: 'bg-blue-50 text-blue-600' },
                     { id: 'max', name: 'ListingAI Max (3 Days)', plan: 'pro', planId: 'max', color: 'bg-rose-50 text-rose-600' },
                     { id: 'monthly', name: '1 Month Pro', plan: 'pro', planId: 'monthly', color: 'bg-indigo-50 text-indigo-600' },
+                    { id: 'half-yearly', name: '6 Month Pro', plan: 'pro', planId: 'half-yearly', color: 'bg-purple-50 text-purple-600' },
                     { id: 'yearly', name: '1 Year Pro', plan: 'pro', planId: 'yearly', color: 'bg-amber-50 text-amber-600' }
                   ].map((p) => (
                     <button
@@ -451,6 +476,16 @@ export default function AdminPanel({ user }: { user: any }) {
                       )}
                     </button>
                   ))}
+                  <div className="pt-4 border-t border-slate-100">
+                    <button
+                      onClick={() => handleResetTrial(editingUser.id)}
+                      disabled={updatingPlan}
+                      className="w-full py-4 rounded-2xl bg-orange-50 text-orange-600 font-black text-[10px] uppercase tracking-widest hover:bg-orange-100 transition-all flex items-center justify-center gap-2"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Reset Trial Status
+                    </button>
+                  </div>
                 </div>
 
                 {updatingPlan && (
