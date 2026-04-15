@@ -79,8 +79,7 @@ export default function AIPhotoStudio({ user }: { user: any }) {
       };
 
       const data = await generateGeminiContent({
-        contents,
-        modelName: 'gemini-3.1-flash-image-preview'
+        contents
       });
       
       if (data.image) {

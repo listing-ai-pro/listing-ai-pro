@@ -109,7 +109,6 @@ export default function ListingGenerator({ user }: { user: any }) {
               { "platform": "string", "price": "string (with ₹)" }
             ]
           }`,
-          modelName: 'gemini-3-flash-preview',
           useSearch: true
         });
         
@@ -178,8 +177,7 @@ export default function ListingGenerator({ user }: { user: any }) {
         try {
           data = await generateGeminiContent({
             contents,
-            prompt: systemPrompt,
-            modelName: 'gemini-3-flash-preview'
+            prompt: systemPrompt
           });
           break;
         } catch (e: any) {

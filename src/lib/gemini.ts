@@ -6,7 +6,10 @@ if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
   console.warn('Gemini API Key is not configured or is using placeholder value.');
 }
 
-export const ai = new GoogleGenAI({ apiKey: apiKey || '' });
+// Initialize the new GoogleGenAI client
+export const ai = new GoogleGenAI({ 
+  apiKey: apiKey || '',
+});
 
 export async function generateGeminiContent(params: {
   prompt?: string;
@@ -16,46 +19,44 @@ export async function generateGeminiContent(params: {
 }) {
   const { prompt, contents, modelName, useSearch } = params;
   
-  // Default to Gemini 3 Flash for text tasks
-  let actualModelName = modelName || 'gemini-3-flash-preview';
+  // Use gemini-1.5-flash for maximum compatibility and quota availability
+  // Newer models like 3.1 or 2.5 often have 0 quota in free tier for some regions
+  let actualModelName = 'gemini-1.5-flash';
   
-  // Detect if this is an image generation/editing task
-  const hasImageInput = contents?.parts?.some((p: any) => p.inlineData) || 
-                       (contents?.inlineData);
+  // Prepare contents in the format expected by @google/genai
+  let finalContents: any[] = [];
   
-  const promptText = typeof contents === 'string' ? contents : 
-                    (Array.isArray(contents?.parts) ? contents.parts.find((p: any) => p.text)?.text : '');
-
-  const isImageOutputRequested = promptText?.toLowerCase().includes('generate') || 
-                                promptText?.toLowerCase().includes('photo') || 
-                                promptText?.toLowerCase().includes('image') ||
-                                promptText?.toLowerCase().includes('background');
-
-  if ((hasImageInput || isImageOutputRequested) && !modelName) {
-    // gemini-3.1-flash-image-preview is the most advanced image model available in v1beta
-    actualModelName = 'gemini-3.1-flash-image-preview';
-  }
-
-  // Ensure we don't use prohibited or deprecated names
-  if (actualModelName.includes('1.5')) {
-    actualModelName = 'gemini-3-flash-preview';
+  if (contents) {
+    // If contents is already an array, use it
+    if (Array.isArray(contents)) {
+      finalContents = contents;
+    } 
+    // If it's the older { parts: [...] } format, wrap it
+    else if (contents.parts) {
+      finalContents = [{ role: 'user', parts: contents.parts }];
+    }
+    // Otherwise try to wrap it
+    else {
+      finalContents = [{ role: 'user', parts: [contents] }];
+    }
+  } else if (prompt) {
+    finalContents = [{ role: 'user', parts: [{ text: prompt }] }];
   }
 
   try {
     const response = await ai.models.generateContent({
       model: actualModelName,
-      contents: contents || prompt,
+      contents: finalContents,
       config: {
-        systemInstruction: contents ? prompt : undefined,
+        systemInstruction: prompt && contents ? prompt : undefined,
         tools: useSearch ? [{ googleSearch: {} }] : undefined,
-        imageConfig: actualModelName.includes('image') ? {
-          aspectRatio: "1:1",
-          imageSize: "1K"
-        } : undefined
       }
     });
 
+    let text = response.text || '';
     let image = null;
+
+    // Extract image if present in response (though 1.5-flash won't generate images)
     if (response.candidates?.[0]?.content?.parts) {
       for (const part of response.candidates[0].content.parts) {
         if (part.inlineData) {
@@ -65,14 +66,19 @@ export async function generateGeminiContent(params: {
       }
     }
 
-    // If we expected an image but got none, and we used a text model, 
-    // it might be because the detection failed.
-    return { text: response.text, image };
+    return { text, image };
   } catch (error: any) {
     console.error('Gemini API Error:', error);
+    
+    // Handle specific quota errors
+    if (error.message && error.message.includes('quota')) {
+      throw new Error('API Quota Exceeded. Please wait a few seconds and try again.');
+    }
+    
     if (error.message && error.message.includes('API key not valid')) {
       throw new Error('Invalid Gemini API Key. Please check your Secrets configuration.');
     }
+    
     throw error;
   }
 }

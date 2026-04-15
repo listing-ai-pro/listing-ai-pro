@@ -68,8 +68,7 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
       };
 
       const data = await generateGeminiContent({
-        contents,
-        modelName: 'gemini-3.1-flash-image-preview'
+        contents
       });
 
       if (data.image) {
@@ -136,8 +135,7 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
 
       const data = await generateGeminiContent({
         contents,
-        prompt: systemPrompt,
-        modelName: 'gemini-3-flash-preview'
+        prompt: systemPrompt
       });
 
       try {
