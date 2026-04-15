@@ -80,7 +80,7 @@ export default function AIPhotoStudio({ user }: { user: any }) {
 
       const data = await generateGeminiContent({
         contents,
-        modelName: 'gemini-2.5-flash-image'
+        modelName: 'gemini-1.5-flash'
       });
       
       if (data.image) {

@@ -81,10 +81,10 @@ export default function WhiteBackground({ user }: { user: any }) {
         ]
       };
 
-      // Using gemini-2.5-flash-image for image editing
+      // Using gemini-1.5-flash for image processing
       const response = await generateGeminiContent({
         contents,
-        modelName: 'gemini-2.5-flash-image'
+        modelName: 'gemini-1.5-flash'
       });
 
       if (response.image) {

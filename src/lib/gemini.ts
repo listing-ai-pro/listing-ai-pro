@@ -21,9 +21,13 @@ export async function generateGeminiContent(params: {
   const { prompt, contents, modelName, useSearch, imageConfig } = params;
   
   // Map model names to supported ones
-  let actualModelName = modelName || 'gemini-3-flash-preview';
-  if (actualModelName === 'gemini-1.5-pro-latest' || actualModelName === 'gemini-3.1-pro-preview') {
-    actualModelName = 'gemini-3-flash-preview'; // Fallback to flash for better compatibility
+  // We use gemini-1.5-flash as it's the most stable free-tier model.
+  // gemini-2.0-flash-exp is also an option but 1.5-flash is safer for general availability.
+  let actualModelName = 'gemini-1.5-flash';
+  
+  // If the user explicitly asks for pro, we can try 1.5-pro, but it has much tighter limits.
+  if (modelName?.includes('pro')) {
+    actualModelName = 'gemini-1.5-pro';
   }
 
   try {
