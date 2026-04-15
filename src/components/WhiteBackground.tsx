@@ -209,7 +209,7 @@ export default function WhiteBackground({ user }: { user: any }) {
           >
             {image ? (
               <div className="relative w-full h-full">
-                <img src={image} alt="Original" className="w-full h-full object-contain rounded-[2rem]" />
+                <img src={image} alt="Original" className="w-full h-full object-contain rounded-[2rem]" referrerPolicy="no-referrer" />
                 <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-[2rem]">
                   <span className="text-white font-black text-xs uppercase tracking-widest">Change Image</span>
                 </div>
@@ -265,7 +265,7 @@ export default function WhiteBackground({ user }: { user: any }) {
           <div className="aspect-square rounded-[3.5rem] border border-slate-100 bg-white flex flex-col items-center justify-center p-10 relative overflow-hidden shadow-2xl">
             {resultImage ? (
               <>
-                <img src={resultImage} alt="Result" className="w-full h-full object-contain rounded-[2rem]" />
+                <img src={resultImage} alt="Result" className="w-full h-full object-contain rounded-[2rem]" referrerPolicy="no-referrer" />
                 <div className="absolute top-8 right-8 flex gap-3">
                   <button 
                     onClick={() => {

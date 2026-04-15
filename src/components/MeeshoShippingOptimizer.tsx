@@ -371,7 +371,7 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
                   </div>
                 </div>
                 <div className="aspect-video rounded-[2.5rem] overflow-hidden border border-slate-50 bg-slate-50 mb-8 relative group">
-                  <img src={optimizedImage} alt="Optimized" className="w-full h-full object-contain p-8" />
+                  <img src={optimizedImage} alt="Optimized" className="w-full h-full object-contain p-8" referrerPolicy="no-referrer" />
                   <button 
                     onClick={() => {
                       const link = document.createElement('a');
