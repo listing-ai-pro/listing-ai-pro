@@ -16,12 +16,29 @@ export async function generateGeminiContent(params: {
 }) {
   const { prompt, contents, modelName, useSearch } = params;
   
-  // Force use of gemini-3-flash-preview as it's the most reliable for free tier
-  let actualModelName = 'gemini-3-flash-preview';
+  // Default to Gemini 3 Flash for text tasks
+  let actualModelName = modelName || 'gemini-3-flash-preview';
   
-  // Only override if explicitly pro is requested, but even then flash is safer
-  if (modelName?.includes('pro')) {
-    actualModelName = 'gemini-3.1-pro-preview';
+  // Detect if this is an image generation/editing task
+  const hasImageInput = contents?.parts?.some((p: any) => p.inlineData) || 
+                       (contents?.inlineData);
+  
+  const promptText = typeof contents === 'string' ? contents : 
+                    (Array.isArray(contents?.parts) ? contents.parts.find((p: any) => p.text)?.text : '');
+
+  const isImageOutputRequested = promptText?.toLowerCase().includes('generate') || 
+                                promptText?.toLowerCase().includes('photo') || 
+                                promptText?.toLowerCase().includes('image') ||
+                                promptText?.toLowerCase().includes('background');
+
+  if ((hasImageInput || isImageOutputRequested) && !modelName) {
+    // gemini-3.1-flash-image-preview is the most advanced image model available in v1beta
+    actualModelName = 'gemini-3.1-flash-image-preview';
+  }
+
+  // Ensure we don't use prohibited or deprecated names
+  if (actualModelName.includes('1.5')) {
+    actualModelName = 'gemini-3-flash-preview';
   }
 
   try {
@@ -31,6 +48,10 @@ export async function generateGeminiContent(params: {
       config: {
         systemInstruction: contents ? prompt : undefined,
         tools: useSearch ? [{ googleSearch: {} }] : undefined,
+        imageConfig: actualModelName.includes('image') ? {
+          aspectRatio: "1:1",
+          imageSize: "1K"
+        } : undefined
       }
     });
 
@@ -44,6 +65,8 @@ export async function generateGeminiContent(params: {
       }
     }
 
+    // If we expected an image but got none, and we used a text model, 
+    // it might be because the detection failed.
     return { text: response.text, image };
   } catch (error: any) {
     console.error('Gemini API Error:', error);

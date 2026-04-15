@@ -68,7 +68,8 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
       };
 
       const data = await generateGeminiContent({
-        contents
+        contents,
+        modelName: 'gemini-3.1-flash-image-preview'
       });
 
       if (data.image) {
