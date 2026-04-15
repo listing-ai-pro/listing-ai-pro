@@ -3,7 +3,7 @@ import { trackUsage, checkLimit, USAGE_LIMITS } from '../lib/usage';
 import { useUsage } from '../hooks/useUsage';
 import { generateGeminiContent } from '../lib/gemini';
 import { isPlanActive } from '../lib/subscription';
-import { trackEvent } from '../lib/pixel';
+import { trackEvent, trackCustom } from '../lib/pixel';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, Loader2, Tag, Percent, TrendingUp, DollarSign, AlertCircle, 
@@ -94,7 +94,11 @@ export default function MarketIntelligence({ user }: { user: any }) {
       await trackUsage(user.uid, 'marketAnalysis');
       
       // Track Facebook Pixel Event
-      trackEvent('MarketAnalysisGenerated', { query });
+      trackCustom('MarketAnalysisGenerated', { 
+        query,
+        userEmail: user.email,
+        userId: user.uid
+      });
     } catch (error: any) {
       console.error('Error analyzing market:', error);
       setErrorMsg(error.message || 'An error occurred while analyzing the market.');

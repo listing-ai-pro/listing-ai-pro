@@ -4,7 +4,7 @@ import { useUsage } from '../hooks/useUsage';
 import { generateGeminiContent } from '../lib/gemini';
 import { compressImage } from '../lib/utils';
 import { isPlanActive } from '../lib/subscription';
-import { trackEvent } from '../lib/pixel';
+import { trackEvent, trackCustom } from '../lib/pixel';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Zap, Loader2, UploadCloud, Image as ImageIcon, AlertCircle, 
@@ -151,7 +151,10 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
       await trackUsage(user.uid, 'shippingOptimizations');
       
       // Track Facebook Pixel Event
-      trackEvent('ShippingOptimized');
+      trackCustom('ShippingOptimized', {
+        userEmail: user.email,
+        userId: user.uid
+      });
     } catch (error: any) {
       console.error('Error optimizing shipping:', error);
       setErrorMsg(error.message || 'An error occurred while analyzing the product.');

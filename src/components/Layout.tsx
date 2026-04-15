@@ -3,6 +3,7 @@ import { LayoutDashboard, Image as ImageIcon, Search, Camera, Zap, BookOpen, Cre
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 import { motion, AnimatePresence } from 'motion/react';
+import { trackCustom } from '../lib/pixel';
 import ListingGenerator from './ListingGenerator';
 import MarketIntelligence from './MarketIntelligence';
 import AIPhotoStudio from './AIPhotoStudio';
@@ -17,6 +18,15 @@ import AdminMessageOverlay from './AdminMessageOverlay';
 
 export default function Layout({ children, user }: { children: React.ReactNode, user: any }) {
   const [activeTab, setActiveTab] = useState('Dashboard');
+
+  const handleTabChange = (tabName: string) => {
+    setActiveTab(tabName);
+    trackCustom('TabSwitch', {
+      tab: tabName,
+      userEmail: user.email,
+      userId: user.uid
+    });
+  };
 
   const toolsAndFeatures = [
     { name: 'Dashboard', icon: LayoutDashboard },
@@ -42,7 +52,7 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
   const renderContent = () => {
     switch (activeTab) {
       case 'Dashboard':
-        return <UserDashboard user={user} onTabChange={setActiveTab} />;
+        return <UserDashboard user={user} onTabChange={handleTabChange} />;
       case 'Listing Generator':
         return <ListingGenerator user={user} />;
       case 'White Background':
@@ -58,7 +68,7 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
       case 'Subscription':
         return <Subscription user={user} />;
       case 'Admin Dashboard':
-        return user.email === 'ezstall135@gmail.com' ? <AdminPanel user={user} /> : <UserDashboard user={user} onTabChange={setActiveTab} />;
+        return user.email === 'ezstall135@gmail.com' ? <AdminPanel user={user} /> : <UserDashboard user={user} onTabChange={handleTabChange} />;
       default:
         return children;
     }
@@ -92,7 +102,7 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
                 return (
                   <button
                     key={item.name}
-                    onClick={() => setActiveTab(item.name)}
+                    onClick={() => handleTabChange(item.name)}
                     className={`group flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-sm font-bold transition-all duration-300 ${
                       isActive 
                         ? 'bg-slate-900 text-white shadow-2xl shadow-slate-900/20 translate-x-1' 

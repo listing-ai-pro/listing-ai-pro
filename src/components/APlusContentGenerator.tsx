@@ -3,7 +3,7 @@ import { trackUsage, checkLimit, USAGE_LIMITS } from '../lib/usage';
 import { useUsage } from '../hooks/useUsage';
 import { generateGeminiContent } from '../lib/gemini';
 import { isPlanActive } from '../lib/subscription';
-import { trackEvent } from '../lib/pixel';
+import { trackEvent, trackCustom } from '../lib/pixel';
 import { motion } from 'motion/react';
 import { Copy, Check, BookOpen, Loader2, Image as ImageIcon, LayoutTemplate, AlertCircle, Lock } from 'lucide-react';
 
@@ -45,7 +45,10 @@ export default function APlusContentGenerator({ user }: { user: any }) {
       await trackUsage(user.uid, 'aplusGenerated');
       
       // Track Facebook Pixel Event
-      trackEvent('APlusContentGenerated');
+      trackCustom('APlusContentGenerated', {
+        userEmail: user.email,
+        userId: user.uid
+      });
     } catch (error: any) {
       console.error('Error generating A+ content:', error);
       setErrorMsg(error.message || 'An error occurred while generating A+ content.');

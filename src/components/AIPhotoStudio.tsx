@@ -4,7 +4,7 @@ import { useUsage } from '../hooks/useUsage';
 import { generateGeminiContent } from '../lib/gemini';
 import { compressImage } from '../lib/utils';
 import { isPlanActive } from '../lib/subscription';
-import { trackEvent } from '../lib/pixel';
+import { trackEvent, trackCustom } from '../lib/pixel';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Copy, Check, Camera, Loader2, UploadCloud, Image as ImageIcon, 
@@ -89,7 +89,12 @@ export default function AIPhotoStudio({ user }: { user: any }) {
         await trackUsage(user.uid, 'photoshoots');
         
         // Track Facebook Pixel Event
-        trackEvent('PhotoStudioGenerated', { mode, pose });
+        trackCustom('PhotoStudioGenerated', { 
+          mode, 
+          pose,
+          userEmail: user.email,
+          userId: user.uid
+        });
       } else {
         throw new Error('AI did not return an image. Please try again with a different prompt.');
       }

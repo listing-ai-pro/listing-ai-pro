@@ -3,6 +3,7 @@ import { Check, Zap, Crown, Calendar, Shield, ArrowRight, Star, Sparkles, Credit
 import { motion } from 'motion/react';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
+import { trackCustom } from '../lib/pixel';
 
 const plans = [
   {
@@ -152,9 +153,16 @@ export default function Subscription({ user }: { user: any }) {
         setLoading(null);
       }
     } else {
+      // Track interest in paid plan
+      trackCustom('PlanInterest', {
+        planId,
+        planName: plans.find(p => p.id === planId)?.name,
+        userEmail: user.email
+      });
+      
       // Redirect to WhatsApp for paid plans
       const message = `Hi, I want to subscribe to the ${plans.find(p => p.id === planId)?.name} plan for ListingAI. My email is ${user.email}.`;
-      const whatsappUrl = `https://wa.me/919876543210?text=${encodeURIComponent(message)}`;
+      const whatsappUrl = `https://wa.me/919023654443?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
     }
   };

@@ -3,7 +3,7 @@ import { auth, db } from '../firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
-import { trackEvent } from '../lib/pixel';
+import { trackEvent, identifyUser, trackCustom } from '../lib/pixel';
 
 export default function Auth() {
   const handleLogin = async () => {
@@ -11,6 +11,11 @@ export default function Auth() {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+
+      // Identify user for Facebook Pixel
+      if (user.email) {
+        identifyUser(user.email, user.displayName || '');
+      }
 
       const userRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userRef);
@@ -32,12 +37,24 @@ export default function Auth() {
 
         // Track Facebook Pixel Event
         trackEvent('CompleteRegistration', {
-          method: 'Google'
+          method: 'Google',
+          email: user.email,
+          name: user.displayName
+        });
+        
+        trackCustom('UserSignup', {
+          email: user.email,
+          sellerId
         });
       } else {
         // Track Login Event
         trackEvent('Login', {
-          method: 'Google'
+          method: 'Google',
+          email: user.email
+        });
+        
+        trackCustom('UserLogin', {
+          email: user.email
         });
       }
     } catch (error) {

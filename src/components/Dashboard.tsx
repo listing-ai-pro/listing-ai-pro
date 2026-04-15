@@ -20,6 +20,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { trackCustom } from '../lib/pixel';
 
 const growthData = [
   { name: 'Day 1', orders: 2 },
@@ -311,6 +312,7 @@ export default function Dashboard() {
       rel="noopener noreferrer"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
+      onClick={() => trackCustom('WhatsAppClick', { buttonText: text, location: 'Dashboard' })}
       className={`flex items-center justify-center gap-3 bg-[#25D366] text-white px-8 py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-green-500/20 hover:bg-[#20ba5a] transition-all ${className}`}
     >
       <MessageCircle className="h-5 w-5 fill-white" />

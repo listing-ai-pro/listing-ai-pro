@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { trackCustom } from '../lib/pixel';
 import { 
   TrendingUp, 
   Zap, 
@@ -118,7 +119,10 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
             </div>
           </div>
           <button
-            onClick={() => onTabChange?.('Subscription')}
+            onClick={() => {
+              trackCustom('UpgradeClick', { location: 'Dashboard Banner', userEmail: user.email });
+              onTabChange?.('Subscription');
+            }}
             className="px-8 py-4 rounded-2xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/10"
           >
             Upgrade Now
@@ -150,7 +154,10 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
                 New Listing
               </button>
               <button 
-                onClick={() => onTabChange?.('Subscription')}
+                onClick={() => {
+                  trackCustom('UpgradeClick', { location: 'Dashboard Welcome', userEmail: user.email });
+                  onTabChange?.('Subscription');
+                }}
                 className="px-6 py-3 rounded-2xl bg-white/10 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all flex items-center gap-2"
               >
                 <CreditCard className="h-3 w-3" />
