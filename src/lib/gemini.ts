@@ -19,28 +19,18 @@ export async function generateGeminiContent(params: {
 }) {
   const { prompt, contents, modelName, useSearch } = params;
   
-  // Use gemini-1.5-flash for maximum compatibility and quota availability
-  // Newer models like 3.1 or 2.5 often have 0 quota in free tier for some regions
-  let actualModelName = 'gemini-1.5-flash';
+  // Use gemini-3-flash-preview as recommended for basic text tasks in the skill
+  // Avoid gemini-1.5-flash as it is prohibited and returns 404 in this SDK
+  let actualModelName = 'gemini-3-flash-preview';
   
   // Prepare contents in the format expected by @google/genai
-  let finalContents: any[] = [];
+  let finalContents: any;
   
   if (contents) {
-    // If contents is already an array, use it
-    if (Array.isArray(contents)) {
-      finalContents = contents;
-    } 
-    // If it's the older { parts: [...] } format, wrap it
-    else if (contents.parts) {
-      finalContents = [{ role: 'user', parts: contents.parts }];
-    }
-    // Otherwise try to wrap it
-    else {
-      finalContents = [{ role: 'user', parts: [contents] }];
-    }
+    // The SDK supports the { parts: [...] } format or an array of such objects
+    finalContents = contents;
   } else if (prompt) {
-    finalContents = [{ role: 'user', parts: [{ text: prompt }] }];
+    finalContents = prompt;
   }
 
   try {
@@ -56,7 +46,7 @@ export async function generateGeminiContent(params: {
     let text = response.text || '';
     let image = null;
 
-    // Extract image if present in response (though 1.5-flash won't generate images)
+    // Extract image if present in response
     if (response.candidates?.[0]?.content?.parts) {
       for (const part of response.candidates[0].content.parts) {
         if (part.inlineData) {
