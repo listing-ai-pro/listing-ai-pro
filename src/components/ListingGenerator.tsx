@@ -4,6 +4,7 @@ import { useUsage } from '../hooks/useUsage';
 import { generateGeminiContent } from '../lib/gemini';
 import { compressImage } from '../lib/utils';
 import { isPlanActive } from '../lib/subscription';
+import { trackEvent } from '../lib/pixel';
 import { motion, AnimatePresence } from 'motion/react';
 import { Copy, Check, Sparkles, Loader2, AlertCircle, ChevronRight, ChevronLeft, FileText, Image as ImageIcon, Link as LinkIcon, UploadCloud, Download, BarChart3, Lightbulb, Lock } from 'lucide-react';
 
@@ -202,6 +203,13 @@ export default function ListingGenerator({ user }: { user: any }) {
       setResults(parsedResults);
       setActiveTab(Object.keys(parsedResults)[0] || platforms[0]);
       await trackUsage(user.uid, 'listingsGenerated');
+      
+      // Track Facebook Pixel Event
+      trackEvent('ListingGenerated', { 
+        platforms: platforms.join(','),
+        inputMethod 
+      });
+
       setStep(3); // Move to results view
       
     } catch (error: any) {

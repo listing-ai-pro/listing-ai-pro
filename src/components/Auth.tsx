@@ -3,6 +3,7 @@ import { auth, db } from '../firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
+import { trackEvent } from '../lib/pixel';
 
 export default function Auth() {
   const handleLogin = async () => {
@@ -27,6 +28,16 @@ export default function Auth() {
           subscriptionDate: new Date(),
           hasUsedTrial: true,
           createdAt: new Date()
+        });
+
+        // Track Facebook Pixel Event
+        trackEvent('CompleteRegistration', {
+          method: 'Google'
+        });
+      } else {
+        // Track Login Event
+        trackEvent('Login', {
+          method: 'Google'
         });
       }
     } catch (error) {

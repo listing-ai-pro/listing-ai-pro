@@ -4,6 +4,7 @@ import { useUsage } from '../hooks/useUsage';
 import { generateGeminiContent } from '../lib/gemini';
 import { compressImage } from '../lib/utils';
 import { isPlanActive } from '../lib/subscription';
+import { trackEvent } from '../lib/pixel';
 import { motion, AnimatePresence } from 'motion/react';
 import { UploadCloud, Image as ImageIcon, Loader2, Download, AlertCircle, Check, Copy, Lock } from 'lucide-react';
 
@@ -88,6 +89,9 @@ export default function WhiteBackground({ user }: { user: any }) {
       if (response.image) {
         setResultImage(response.image);
         await trackUsage(user.uid, 'whiteBackgrounds');
+        
+        // Track Facebook Pixel Event
+        trackEvent('WhiteBackgroundGenerated');
       } else {
         throw new Error('AI did not return an image. Please try again with a different photo.');
       }

@@ -19,18 +19,27 @@ export async function generateGeminiContent(params: {
 }) {
   const { prompt, contents, modelName, useSearch } = params;
   
-  // Use gemini-3-flash-preview as recommended for basic text tasks in the skill
-  // Avoid gemini-1.5-flash as it is prohibited and returns 404 in this SDK
-  let actualModelName = 'gemini-3-flash-preview';
+  // Use gemini-flash-latest for maximum stability and quota availability
+  // This is the most reliable alias for production-like use
+  let actualModelName = 'gemini-flash-latest';
   
-  // Prepare contents in the format expected by @google/genai
-  let finalContents: any;
+  // Prepare contents in the format expected by @google/genai (array of Content objects)
+  let finalContents: any[] = [];
   
   if (contents) {
-    // The SDK supports the { parts: [...] } format or an array of such objects
-    finalContents = contents;
+    if (Array.isArray(contents)) {
+      finalContents = contents;
+    } else if (contents.parts) {
+      // Wrap parts in a content object with role
+      finalContents = [{ role: 'user', parts: contents.parts }];
+    } else if (typeof contents === 'string') {
+      finalContents = [{ role: 'user', parts: [{ text: contents }] }];
+    } else {
+      // Fallback for other object types
+      finalContents = [{ role: 'user', parts: [contents] }];
+    }
   } else if (prompt) {
-    finalContents = prompt;
+    finalContents = [{ role: 'user', parts: [{ text: prompt }] }];
   }
 
   try {

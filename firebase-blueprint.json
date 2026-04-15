@@ -33,7 +33,7 @@
     },
     "DailyStats": {
       "title": "DailyStats",
-      "description": "Daily usage statistics for a user",
+      "description": "Daily usage statistics for a user. Limits: Listings (20), White BG (5), Market Analysis (10), A+ Content (5), Photoshoots (4), Shipping (5).",
       "type": "object",
       "properties": {
         "userId": { "type": "string", "description": "User ID" },

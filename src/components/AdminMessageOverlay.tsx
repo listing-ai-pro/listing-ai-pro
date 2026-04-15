@@ -46,6 +46,10 @@ export default function AdminMessageOverlay({ user }: { user: any }) {
       } else {
         setActiveMessage(null);
       }
+    }, (error) => {
+      console.error("Error fetching admin messages:", error);
+      // Don't crash the app, just don't show the overlay
+      setActiveMessage(null);
     });
 
     return () => unsubscribe();

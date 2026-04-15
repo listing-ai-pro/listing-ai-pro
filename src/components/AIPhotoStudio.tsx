@@ -4,6 +4,7 @@ import { useUsage } from '../hooks/useUsage';
 import { generateGeminiContent } from '../lib/gemini';
 import { compressImage } from '../lib/utils';
 import { isPlanActive } from '../lib/subscription';
+import { trackEvent } from '../lib/pixel';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Copy, Check, Camera, Loader2, UploadCloud, Image as ImageIcon, 
@@ -86,6 +87,9 @@ export default function AIPhotoStudio({ user }: { user: any }) {
         setResultImage(data.image);
         setResult(data.text || '');
         await trackUsage(user.uid, 'photoshoots');
+        
+        // Track Facebook Pixel Event
+        trackEvent('PhotoStudioGenerated', { mode, pose });
       } else {
         throw new Error('AI did not return an image. Please try again with a different prompt.');
       }
@@ -183,7 +187,7 @@ export default function AIPhotoStudio({ user }: { user: any }) {
                     style={{ width: `${Math.min(100, (usage.photoshoots / USAGE_LIMITS.photoshoots) * 100)}%` }}
                   ></div>
                 </div>
-                <span className="text-[10px] font-black text-white">{USAGE_LIMITS.photoshoots - usage.photoshoots} / {USAGE_LIMITS.photoshoots} LEFT</span>
+                <span className="text-[10px] font-black text-white">{usage.photoshoots} / {USAGE_LIMITS.photoshoots}</span>
               </div>
             </div>
           </div>

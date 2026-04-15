@@ -17,7 +17,8 @@ import {
   AlertCircle,
   BookOpen,
   Crown,
-  CreditCard
+  CreditCard,
+  Lock
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -46,13 +47,13 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
     if (!isActive) {
       return "Aapka plan expire ho gaya hai. Naya plan buy karein taaki aap tools use kar sakein.";
     }
-    if (usage.listingsGenerated < 5) {
-      return "Aaj kam se kam 10 listings optimize karein taaki aapka search rank top pe aaye aur sales badhe.";
+    if (usage.listingsGenerated < USAGE_LIMITS.listingsGenerated / 2) {
+      return `Aaj kam se kam ${USAGE_LIMITS.listingsGenerated / 2} listings optimize karein taaki aapka search rank top pe aaye aur sales badhe.`;
     }
-    if (usage.whiteBackgrounds < 3) {
+    if (usage.whiteBackgrounds < USAGE_LIMITS.whiteBackgrounds) {
       return "Aapki product photos ka background remove karein, professional images se conversion rate 40% tak badh sakta hai.";
     }
-    if (usage.marketAnalysis < 2) {
+    if (usage.marketAnalysis < USAGE_LIMITS.marketAnalysis / 2) {
       return "Market intelligence tool use karein aur dekhein competitors kya price pe sell kar rahe hain, isse aap apni pricing behtar kar sakte hain.";
     }
     return "Aapka performance behtar hai! Naye trending products add karke apna catalog expand karein aur market share badhayein.";

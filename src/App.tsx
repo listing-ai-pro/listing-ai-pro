@@ -9,6 +9,7 @@ import { auth, db } from './firebase';
 import Auth from './components/Auth';
 import Layout from './components/Layout';
 import LandingPage from './components/LandingPage';
+import { initPixel } from './lib/pixel';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -16,6 +17,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Initialize Facebook Pixel
+    initPixel();
+
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (!currentUser) {
