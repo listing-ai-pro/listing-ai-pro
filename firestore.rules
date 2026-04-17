@@ -84,5 +84,10 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isAdmin() && isValidAdminMsg(request.resource.data);
     }
+
+    // Allow admins to query all daily_stats for analytics
+    match /{path=**}/daily_stats/{statId} {
+      allow read: if isAdmin();
+    }
   }
 }

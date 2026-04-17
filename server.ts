@@ -3,8 +3,15 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
+import 'dotenv/config';
+import axios from 'axios';
+import crypto from 'crypto';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const hashData = (data: string) => {
+  return crypto.createHash('sha256').update(data.toLowerCase().trim()).digest('hex');
+};
 
 async function startServer() {
   const app = express();
@@ -16,54 +23,34 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
-  app.post("/api/gemini", async (req, res) => {
+  app.post('/api/fb-conversion', async (req, res) => {
+    const { eventName, eventData, userData } = req.body;
+    
+    const payload = {
+      data: [{
+        event_name: eventName,
+        event_time: Math.floor(Date.now() / 1000),
+        user_data: {
+          em: userData.email ? hashData(userData.email) : undefined,
+          ph: userData.phone ? hashData(userData.phone) : undefined,
+          client_ip_address: req.ip,
+          client_user_agent: req.headers['user-agent']
+        },
+        custom_data: eventData,
+        action_source: 'website'
+      }],
+      test_event_code: process.env.FB_TEST_EVENT_CODE
+    };
+
     try {
-      const { prompt, contents, modelName, useSearch } = req.body;
-      const apiKey = process.env.GEMINI_API_KEY;
-
-      if (!apiKey) {
-        return res.status(500).json({ error: "Gemini API Key not configured on server." });
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
-      const actualModelName = 'gemini-1.5-flash';
-
-      let finalContents: any[] = [];
-      if (contents) {
-        finalContents = Array.isArray(contents) ? contents : [contents];
-      } else if (prompt) {
-        finalContents = [{ role: 'user', parts: [{ text: prompt }] }];
-      }
-
-      const result = await ai.models.generateContent({
-        model: actualModelName,
-        contents: finalContents,
-        config: {
-          systemInstruction: prompt && contents ? prompt : undefined,
-          tools: useSearch ? [{ googleSearch: {} }] : undefined,
-        }
-      });
-
-      const text = result.text || '';
-      
-      let image = null;
-      // Extract image if present
-      if (result.candidates?.[0]?.content?.parts) {
-        for (const part of result.candidates[0].content.parts) {
-          if (part.inlineData) {
-            image = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-            break;
-          }
-        }
-      }
-
-      res.json({ text, image });
+      await axios.post(
+        `https://graph.facebook.com/v19.0/${process.env.VITE_FB_PIXEL_ID}/events?access_token=${process.env.FB_ACCESS_TOKEN}`,
+        payload
+      );
+      res.json({ status: 'success' });
     } catch (error: any) {
-      console.error("Gemini Server Error:", error);
-      res.status(500).json({ 
-        error: error.message || "Internal Server Error",
-        details: error.stack
-      });
+      console.error('FB API Error:', error.response?.data || error.message);
+      res.status(500).json({ error: 'Failed to send event' });
     }
   });
 

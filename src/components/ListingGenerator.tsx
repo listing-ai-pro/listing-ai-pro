@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { trackUsage, checkLimit, USAGE_LIMITS } from '../lib/usage';
+import { trackUsage, checkLimit, PLAN_LIMITS } from '../lib/usage';
 import { useUsage } from '../hooks/useUsage';
 import { generateGeminiContent } from '../lib/gemini';
 import { compressImage } from '../lib/utils';
 import { isPlanActive } from '../lib/subscription';
 import { trackEvent, trackCustom } from '../lib/pixel';
+import { trackAction } from '../lib/actions';
 import { motion, AnimatePresence } from 'motion/react';
 import { Copy, Check, Sparkles, Loader2, AlertCircle, ChevronRight, ChevronLeft, FileText, Image as ImageIcon, Link as LinkIcon, UploadCloud, Download, BarChart3, Lightbulb, Lock } from 'lucide-react';
 
@@ -20,7 +21,7 @@ const MARKETPLACES = [
 ];
 
 export default function ListingGenerator({ user }: { user: any }) {
-  const { usage } = useUsage(user.uid);
+  const { usage } = useUsage(user);
   const isActive = isPlanActive(user);
   const [step, setStep] = useState(1);
   const [platforms, setPlatforms] = useState<string[]>([]);
@@ -79,9 +80,11 @@ export default function ListingGenerator({ user }: { user: any }) {
     setLoadingStep('Analyzing Product...');
     
     try {
-      const isWithinLimit = await checkLimit(user.uid, 'listingsGenerated');
+      const isWithinLimit = await checkLimit(user, 'listingsGenerated');
       if (!isWithinLimit) {
-        setErrorMsg(`Daily listing limit reached (${USAGE_LIMITS.listingsGenerated}/${USAGE_LIMITS.listingsGenerated}). Please try again tomorrow.`);
+        const planId = user.activePlanId || 'trial';
+        const limit = PLAN_LIMITS[planId]?.listingsGenerated || 3;
+        setErrorMsg(`Daily listing limit reached (${limit}/${limit}). Please try again tomorrow.`);
         setLoading(false);
         return;
       }
@@ -129,8 +132,8 @@ export default function ListingGenerator({ user }: { user: any }) {
         - Amazon.in: Title max 200 characters. No promotional phrases. Requires: Title, 5 Bullet Points, Description, Search Terms, HSN/GST.
         - Flipkart: Title max 150 characters. Requires: Title, Key Features, Description, Search Keywords.
         - Meesho: Simple titles. Requires: Title, Description, Category, Material/Fabric, Weight/Dimensions.
-        - eBay: Title max 80 characters. Requires: Title, Description (HTML), Item Specifics (Brand, Type, Color, etc.).
-        - Etsy: Title max 140 characters. Requires: Title, Description, 13 Tags, Materials.
+        - eBay: Title max 80 characters. Requires: Title, Description (HTML), Item Specifics (specifically Type, Color, Material, Occasion, Brand).
+        - Etsy: Title max 140 characters. Requires: Title, Description, 13 Tags (highly relevant, e.g., 'embroidered blouse', 'designer blouse', 'traditional clothing'), Materials, and 'Material & Care' (e.g., mentioning 'Phantom Silk').
         - Shopify: Requires: Title, Description (HTML), Tags, SEO Title, SEO Description, URL Handle.
         - Myntra: Requires: Title, Description, Material & Care, Style Note.
         - Website: Requires: Title, Meta Description, Full Content, Tags.
@@ -143,7 +146,11 @@ export default function ListingGenerator({ user }: { user: any }) {
         - description (string): A persuasive, detailed product description.
         - bulletPoints (array of strings): 5-7 key features and benefits.
         - keywords (array of strings): 10-15 relevant backend search terms.
-        - platformSpecificFields (object): A key-value map of fields specifically required by this platform (e.g., "Material & Care" for Myntra, "Item Specifics" for eBay, "Handle" for Shopify).
+        - platformSpecificFields (object): A key-value map of fields specifically required by this platform. 
+          * For Etsy: include "Material & Care" and "13 Tags" (as an array).
+          * For eBay: include "Item Specifics" as a sub-object with Type, Color, Material, Occasion, and Brand.
+          * For Shopify: include "Handle".
+          * For Myntra: include "Material & Care" and "Style Note".
         - optimizationSteps (array of strings): A step-by-step guide on how to list this product for maximum visibility.
         - marketInsights (object): Echo back the provided Market Data.
           - hsnCode (string)
@@ -152,6 +159,8 @@ export default function ListingGenerator({ user }: { user: any }) {
       `;
 
       const userPrompt = `Generate listings for: ${productQuery}. ${additionalInfo ? `Additional Info: ${additionalInfo}` : ''}`;
+      
+      trackAction('Generate Listing', { product: productQuery, platforms });
 
       const contents = {
         parts: [
@@ -322,7 +331,7 @@ export default function ListingGenerator({ user }: { user: any }) {
             <div className="pt-4">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Contact Admin on WhatsApp to Upgrade</p>
               <a 
-                href="https://wa.me/919876543210?text=Hi, I want to upgrade my plan for ListingAI."
+                href={`https://wa.me/919023654443?text=${encodeURIComponent(`Hi, I want to upgrade my plan for ListingAI.\n\nSeller ID: ${user.sellerId || user.uid?.substring(0, 8)}\nEmail: ${user.email}`)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="block w-full py-5 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/20"
@@ -343,39 +352,39 @@ export default function ListingGenerator({ user }: { user: any }) {
       {/* Header Section */}
       <div className="relative mb-16">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-          <div className="max-w-3xl">
+          <div className="max-w-3xl text-center lg:text-left">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 mb-6"
             >
               <Sparkles className="h-4 w-4 text-blue-600" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">AI-Powered Listing Engine</span>
+              <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-blue-600">AI-Powered Listing Engine</span>
             </motion.div>
-            <h2 className="text-5xl lg:text-7xl font-black tracking-tight text-slate-900 mb-6 font-display leading-[0.9]">
+            <h2 className="text-4xl lg:text-7xl font-black tracking-tight text-slate-900 mb-6 font-display leading-[1.1] lg:leading-[0.9]">
               Sell <span className="text-blue-600">Everywhere</span>,<br />
               Effortlessly.
             </h2>
-            <p className="text-xl font-medium text-slate-500 leading-relaxed max-w-xl">
+            <p className="text-base lg:text-xl font-medium text-slate-500 leading-relaxed max-w-xl mx-auto lg:mx-0">
               Transform your product ideas into high-converting listings optimized for global marketplaces in seconds.
             </p>
           </div>
           
-          <div className="flex flex-col items-end gap-6">
-            <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-slate-200 shadow-sm">
-              <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
-                <Sparkles className="h-6 w-6 text-white" />
+          <div className="flex flex-col items-center lg:items-end gap-6">
+            <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-slate-200 shadow-sm w-full lg:w-auto">
+              <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
+                <Sparkles className="h-5 w-5 lg:h-6 lg:w-6 text-white" />
               </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Daily Credits</p>
+              <div className="flex-1 lg:flex-none">
+                <p className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Daily Credits</p>
                 <div className="flex items-center gap-3">
-                  <div className="h-2 w-32 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2 w-24 lg:w-32 bg-slate-100 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-blue-600 transition-all duration-500" 
-                      style={{ width: `${Math.min(100, (usage.listingsGenerated / USAGE_LIMITS.listingsGenerated) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (usage.listingsGenerated / (PLAN_LIMITS[user.activePlanId || 'trial']?.listingsGenerated || 3)) * 100)}%` }}
                     ></div>
                   </div>
-                  <span className="text-sm font-black text-slate-900">{usage.listingsGenerated} / {USAGE_LIMITS.listingsGenerated}</span>
+                  <span className="text-xs lg:text-sm font-black text-slate-900 whitespace-nowrap">{usage.listingsGenerated} / {PLAN_LIMITS[user.activePlanId || 'trial']?.listingsGenerated || 3}</span>
                 </div>
               </div>
             </div>
@@ -759,9 +768,10 @@ export default function ListingGenerator({ user }: { user: any }) {
                           <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Product Narrative</h4>
                         </div>
                         <div className="prose prose-slate max-w-none">
-                          <p className="text-lg font-medium text-slate-600 leading-relaxed whitespace-pre-wrap">
-                            {results[activeTab].description}
-                          </p>
+                          <div 
+                            className="text-lg font-medium text-slate-600 leading-relaxed description-content"
+                            dangerouslySetInnerHTML={{ __html: results[activeTab].description }}
+                          />
                         </div>
                       </div>
 
@@ -773,9 +783,22 @@ export default function ListingGenerator({ user }: { user: any }) {
                             {Object.entries(results[activeTab].platformSpecificFields).map(([key, value]: [string, any]) => (
                               <div key={key} className="bg-slate-50 p-6 rounded-[1.5rem] border border-slate-100 group hover:bg-white hover:shadow-xl transition-all">
                                 <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 group-hover:text-blue-600 transition-colors">{key}</span>
-                                <p className="text-sm font-bold text-slate-800 leading-relaxed">
-                                  {Array.isArray(value) ? value.join(', ') : String(value)}
-                                </p>
+                                <div className="text-sm font-bold text-slate-800 leading-relaxed">
+                                  {Array.isArray(value) ? (
+                                    value.join(', ')
+                                  ) : typeof value === 'object' && value !== null ? (
+                                    <div className="grid grid-cols-1 gap-2 mt-2">
+                                      {Object.entries(value).map(([k, v]: [string, any]) => (
+                                        <div key={k} className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-100">
+                                          <span className="text-[8px] font-black text-slate-400 uppercase">{k}</span>
+                                          <span className="text-[10px] font-bold text-slate-900">{String(v)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    String(value)
+                                  )}
+                                </div>
                               </div>
                             ))}
                           </div>

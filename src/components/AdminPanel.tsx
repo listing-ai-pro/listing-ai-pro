@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, where, Timestamp, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
+import { 
+  collection, getDocs, query, orderBy, where, Timestamp, 
+  doc, updateDoc, serverTimestamp, addDoc, collectionGroup 
+} from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { motion, AnimatePresence } from 'motion/react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { 
   Settings, BarChart3, Key, Loader2, FileText, Image as ImageIcon, 
   Search, BookOpen, Users, RotateCcw, Download, Edit3, 
-  Clock, UserX, CheckCircle2, Filter, ChevronRight, MoreHorizontal, Zap, MessageCircle
+  Clock, UserX, CheckCircle2, Filter, ChevronRight, MoreHorizontal, Zap, MessageCircle, TrendingUp
 } from 'lucide-react';
 
 export default function AdminPanel({ user }: { user: any }) {
@@ -25,6 +29,7 @@ export default function AdminPanel({ user }: { user: any }) {
   // Plan Management state
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [updatingPlan, setUpdatingPlan] = useState(false);
+  const [todayStats, setTodayStats] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchUsers() {
@@ -33,14 +38,44 @@ export default function AdminPanel({ user }: { user: any }) {
       try {
         const q = query(collection(db, path), orderBy('createdAt', 'desc'));
         const querySnapshot = await getDocs(q);
-        const userData = querySnapshot.docs.map(doc => ({ 
-          id: doc.id, 
-          ...doc.data(),
-          // Mocking some data for visual fidelity if missing
-          status: doc.data().subscriptionPlan === 'pro' ? 'ACTIVE' : 'EXPIRED',
-          usage: 0, // Default to 0, real usage would require aggregation
-          expiryDate: doc.data().subscriptionDate ? new Date(doc.data().subscriptionDate.seconds * 1000).toLocaleDateString() : 'N/A'
-        }));
+        const userData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          
+          // Calculate status and expiry
+          let status = 'EXPIRED';
+          let expiryDate = 'N/A';
+          
+          if (data.subscriptionPlan === 'pro' && data.subscriptionDate) {
+            const subDate = data.subscriptionDate instanceof Timestamp 
+              ? data.subscriptionDate.toDate() 
+              : new Date(data.subscriptionDate.seconds * 1000);
+              
+            const now = new Date();
+            const diffInMs = now.getTime() - subDate.getTime();
+            const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+
+            let durationDays = 0;
+            switch (data.activePlanId) {
+              case 'trial': durationDays = 7; break;
+              case 'max': durationDays = 3; break;
+              case 'monthly': durationDays = 30; break;
+              case 'half-yearly': durationDays = 180; break;
+              case 'yearly': durationDays = 365; break;
+            }
+
+            status = diffInDays <= durationDays ? 'ACTIVE' : 'EXPIRED';
+            const expiry = new Date(subDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+            expiryDate = expiry.toLocaleDateString();
+          }
+
+          return { 
+            id: doc.id, 
+            ...data,
+            status,
+            usage: data.usage_listingsGenerated || 0,
+            expiryDate
+          };
+        });
         setUsers(userData);
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -49,8 +84,25 @@ export default function AdminPanel({ user }: { user: any }) {
         setLoading(false);
       }
     }
-    if (activeTab === 'USERS') {
+    if (activeTab === 'USERS' || activeTab === 'ANALYTICS') {
       fetchUsers();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    async function fetchTodayStats() {
+      const today = new Date().toISOString().split('T')[0];
+      try {
+        const q = query(collectionGroup(db, 'daily_stats'), where('date', '==', today));
+        const querySnapshot = await getDocs(q);
+        const stats = querySnapshot.docs.map(doc => doc.data());
+        setTodayStats(stats);
+      } catch (error) {
+        console.error("Error fetching today's stats:", error);
+      }
+    }
+    if (activeTab === 'ANALYTICS') {
+      fetchTodayStats();
     }
   }, [activeTab]);
 
@@ -68,7 +120,8 @@ export default function AdminPanel({ user }: { user: any }) {
 
   const filteredUsers = users.filter(u => {
     const matchesSearch = (u.displayName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         (u.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+                         (u.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (u.sellerId || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filter === 'ALL' || u.status === filter;
     return matchesSearch && matchesFilter;
   });
@@ -205,16 +258,16 @@ export default function AdminPanel({ user }: { user: any }) {
   const renderUsersTab = () => (
     <div className="space-y-8">
       {/* Header & Search */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
-          <h3 className="text-3xl font-black text-slate-900 font-display">User Management</h3>
+          <h3 className="text-2xl lg:text-3xl font-black text-slate-900 font-display">User Management</h3>
           <p className="text-sm font-medium text-slate-500 mt-1">Monitor and control user access</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="h-12 w-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all shadow-sm">
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <button className="w-full sm:w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all shadow-sm">
             <RotateCcw className="h-5 w-5" />
           </button>
-          <div className="relative flex-1 md:w-80">
+          <div className="relative w-full sm:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input 
               type="text"
@@ -251,14 +304,14 @@ export default function AdminPanel({ user }: { user: any }) {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden">
-        <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
-          <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200">
+      <div className="bg-white rounded-[2rem] lg:rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden">
+        <div className="p-4 lg:p-8 border-b border-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/30">
+          <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 w-full sm:w-auto overflow-x-auto no-scrollbar">
             {(['ALL', 'ACTIVE', 'EXPIRED', 'BLOCKED'] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                   filter === f ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-900'
                 }`}
               >
@@ -266,7 +319,7 @@ export default function AdminPanel({ user }: { user: any }) {
               </button>
             ))}
           </div>
-          <button className="flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
+          <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
             <Download className="h-4 w-4" />
             Export Data
           </button>
@@ -278,8 +331,8 @@ export default function AdminPanel({ user }: { user: any }) {
               <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">
                 <th className="px-8 py-6 text-left">User Profile</th>
                 <th className="px-8 py-6 text-left">Subscription</th>
-                <th className="px-8 py-6 text-left">Addons</th>
-                <th className="px-8 py-6 text-left">Usage</th>
+                <th className="px-8 py-6 text-left">Last Active</th>
+                <th className="px-8 py-6 text-left">Total Usage</th>
                 <th className="px-8 py-6 text-left">Expiry</th>
                 <th className="px-8 py-6 text-right">Actions</th>
               </tr>
@@ -320,22 +373,37 @@ export default function AdminPanel({ user }: { user: any }) {
                       u.subscriptionPlan === 'pro' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
                     }`}>
                       <Zap className="h-3 w-3" />
-                      {u.subscriptionPlan === 'pro' ? 'PRO' : 'FREE'}
+                      {u.subscriptionPlan === 'pro' 
+                        ? (u.activePlanId === 'trial' ? 'TRIAL' : 
+                           u.activePlanId === 'max' ? 'MAX' :
+                           u.activePlanId === 'monthly' ? '1 MONTH' :
+                           u.activePlanId === 'half-yearly' ? '6 MONTH' :
+                           u.activePlanId === 'yearly' ? '1 YEAR' : 'PRO')
+                        : 'NO PLAN'}
                     </span>
                   </td>
                   <td className="px-8 py-6">
-                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">None</span>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2 text-slate-400">
+                        <Clock className="h-3 w-3" />
+                        <span className="text-[10px] font-bold">
+                          {u.lastActive 
+                            ? (u.lastActive.toDate ? u.lastActive.toDate().toLocaleDateString() : new Date(u.lastActive).toLocaleDateString())
+                            : 'Never'}
+                        </span>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-8 py-6">
                     <div className="w-32">
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Listings</span>
-                        <span className="text-[9px] font-black text-slate-900">{u.usage || 0}/20</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Actions</span>
+                        <span className="text-[9px] font-black text-slate-900">{u.totalUsage || 0}</span>
                       </div>
                       <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-blue-600 transition-all duration-500" 
-                          style={{ width: `${Math.min(100, ((u.usage || 0) / 20) * 100)}%` }}
+                          style={{ width: `${Math.min(100, ((u.totalUsage || 0) / 100) * 100)}%` }}
                         ></div>
                       </div>
                     </div>
@@ -370,6 +438,223 @@ export default function AdminPanel({ user }: { user: any }) {
     </div>
   );
 
+  const renderAnalyticsTab = () => {
+    const usageData = [
+      { name: 'Listings', value: users.reduce((acc, u) => acc + (u.usage_listingsGenerated || 0), 0) },
+      { name: 'Backgrounds', value: users.reduce((acc, u) => acc + (u.usage_whiteBackgrounds || 0), 0) },
+      { name: 'Market', value: users.reduce((acc, u) => acc + (u.usage_marketAnalysis || 0), 0) },
+      { name: 'A+ Content', value: users.reduce((acc, u) => acc + (u.usage_aplusGenerated || 0), 0) },
+      { name: 'Photoshoots', value: users.reduce((acc, u) => acc + (u.usage_photoshoots || 0), 0) },
+      { name: 'Logistics', value: users.reduce((acc, u) => acc + (u.usage_shippingOptimizations || 0), 0) },
+    ];
+
+    const planDistribution = [
+      { name: 'Trial', count: users.filter(u => u.activePlanId === 'trial').length },
+      { name: 'Monthly', count: users.filter(u => u.activePlanId === 'monthly').length },
+      { name: '6 Months', count: users.filter(u => u.activePlanId === 'half-yearly').length },
+      { name: 'Yearly', count: users.filter(u => u.activePlanId === 'yearly').length },
+      { name: 'Max', count: users.filter(u => u.activePlanId === 'max').length },
+    ];
+
+    const mostActive = [...users].sort((a, b) => (b.totalUsage || 0) - (a.totalUsage || 0)).slice(0, 5);
+
+    return (
+      <div className="space-y-12">
+        {/* Growth Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl">
+            <h4 className="text-xl font-black text-slate-900 font-display mb-8">Usage Distribution</h4>
+            <div className="h-80 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={usageData}>
+                  <XAxis dataKey="name" fontSize={10} fontWeight="bold" axisLine={false} tickLine={false} />
+                  <YAxis fontSize={10} fontWeight="bold" axisLine={false} tickLine={false} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                    cursor={{ fill: 'rgba(59, 130, 246, 0.05)' }}
+                  />
+                  <Bar dataKey="value" fill="#2563eb" radius={[6, 6, 0, 0]} barSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl">
+            <h4 className="text-xl font-black text-slate-900 font-display mb-8">Plan Distribution</h4>
+            <div className="h-80 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={planDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="count"
+                  >
+                    {planDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap justify-center gap-4 mt-4">
+                {planDistribution.map((p, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][i % 5] }}></div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{p.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Most Active Users & System Health */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-7 bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h4 className="text-xl font-black text-slate-900 font-display">Most Active Users</h4>
+                <p className="text-xs font-medium text-slate-400 mt-1">Users with highest platform engagement</p>
+              </div>
+              <TrendingUp className="h-6 w-6 text-emerald-600" />
+            </div>
+            
+            <div className="space-y-4">
+              {mostActive.map((u, i) => (
+                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-50 transition-all hover:border-blue-100 hover:bg-blue-50/10">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-black text-xs text-blue-600">
+                      {i + 1}
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900">{u.displayName || u.email.split('@')[0]}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{u.sellerId || 'No ID'}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-blue-600">{u.totalUsage || 0}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Actions</p>
+                  </div>
+                </div>
+              ))}
+              {mostActive.length === 0 && (
+                <p className="text-center py-10 text-xs font-bold text-slate-400 uppercase tracking-widest">No activity data yet</p>
+              )}
+            </div>
+          </div>
+
+          <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-slate-900 rounded-[3rem] p-8 text-white relative overflow-hidden border border-slate-800">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 rounded-full blur-[60px] -mr-16 -mt-16 opacity-20"></div>
+               <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-6">Today's Listings (Free)</h4>
+               <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-4xl font-black font-display text-white">
+                    {todayStats.filter(s => users.find(u => u.id === s.userId)?.activePlanId === 'trial').reduce((acc, s) => acc + (s.listingsGenerated || 0), 0)}
+                  </span>
+                  <span className="text-xs font-bold text-slate-500">/ {users.filter(u => u.activePlanId === 'trial').length * 3} Capacity</span>
+               </div>
+               <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                 <div 
+                   className="h-full bg-blue-600 transition-all duration-500"
+                   style={{ 
+                     width: `${Math.min(100, (todayStats.filter(s => users.find(u => u.id === s.userId)?.activePlanId === 'trial').reduce((acc, s) => acc + (s.listingsGenerated || 0), 0) / (users.filter(u => u.activePlanId === 'trial').length * 3 || 1)) * 100)}%` 
+                   }}
+                 ></div>
+               </div>
+            </div>
+
+            <div className="bg-slate-900 rounded-[3rem] p-8 text-white relative overflow-hidden border border-slate-800">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-600 rounded-full blur-[60px] -mr-16 -mt-16 opacity-10"></div>
+               <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-6">Today's Backgrounds (Free)</h4>
+               <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-4xl font-black font-display text-white">
+                    {todayStats.filter(s => users.find(u => u.id === s.userId)?.activePlanId === 'trial').reduce((acc, s) => acc + (s.whiteBackgrounds || 0), 0)}
+                  </span>
+                  <span className="text-xs font-bold text-slate-500">/ {users.filter(u => u.activePlanId === 'trial').length * 2} Capacity</span>
+               </div>
+               <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                 <div 
+                   className="h-full bg-emerald-600 transition-all duration-500"
+                   style={{ 
+                     width: `${Math.min(100, (todayStats.filter(s => users.find(u => u.id === s.userId)?.activePlanId === 'trial').reduce((acc, s) => acc + (s.whiteBackgrounds || 0), 0) / (users.filter(u => u.activePlanId === 'trial').length * 2 || 1)) * 100)}%` 
+                   }}
+                 ></div>
+               </div>
+            </div>
+
+            <div className="bg-slate-950 rounded-[3rem] p-8 text-white relative overflow-hidden flex-1 border border-slate-800">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 rounded-full blur-[60px] -mr-16 -mt-16 opacity-20"></div>
+              <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-6">System Health</h4>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-slate-400">Database Status</span>
+                  <span className="flex items-center gap-2 text-[9px] font-black uppercase text-emerald-400">
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                    Operational
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-slate-400">Trial Users Active</span>
+                  <span className="text-[9px] font-black uppercase text-blue-400">{users.filter(u => u.activePlanId === 'trial').length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-slate-400">Limits Reset In</span>
+                  <span className="text-[9px] font-black uppercase text-amber-400">
+                    {Math.max(0, 24 - new Date().getUTCHours())}h
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-600 rounded-[3rem] p-8 text-white shadow-xl shadow-blue-600/20">
+              <h4 className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-4">Free Tier Status</h4>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-3xl font-black font-display">
+                  {Math.round((todayStats.filter(s => users.find(u => u.id === s.userId)?.activePlanId === 'trial').length / (users.filter(u => u.activePlanId === 'trial').length || 1)) * 100)}%
+                </span>
+                <span className="text-[10px] font-bold text-blue-200">Active Daily</span>
+              </div>
+              <p className="text-[10px] font-medium text-blue-100 leading-relaxed opacity-80">
+                Daily limits: 3 Listings, 2 BG Removes, 3 Analysis. Resets every 24h.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* System Health Section (Original Wide Section) */}
+        <div className="bg-slate-900 rounded-[3.5rem] p-12 text-white overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600 rounded-full blur-[150px] -mr-48 -mt-48 opacity-20"></div>
+          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12">
+            <div className="max-w-md">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] font-black uppercase tracking-widest mb-6">
+                <Zap className="h-3 w-3" />
+                System Intelligence
+              </div>
+              <h3 className="text-3xl font-black font-display mb-4">India's Fastest AI Growth Engine</h3>
+              <p className="text-slate-400 font-medium leading-relaxed">
+                Platform is currently scaling at {(stats.active/stats.total*100 || 0).toFixed(1)}% conversion rate. Monitor real-time conversion and churn metrics.
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <div className="px-8 py-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md text-center">
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 font-display">MAU</p>
+                <p className="text-3xl font-black">{stats.active}</p>
+              </div>
+              <div className="px-8 py-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md text-center">
+                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2 font-display">Retention</p>
+                <p className="text-3xl font-black">94%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-12 pb-20">
       {/* Tab Navigation */}
@@ -403,13 +688,7 @@ export default function AdminPanel({ user }: { user: any }) {
         >
           {activeTab === 'USERS' && renderUsersTab()}
           {activeTab === 'MESSAGES' && renderMessagesTab()}
-          {activeTab === 'ANALYTICS' && (
-            <div className="p-20 text-center bg-white rounded-[3.5rem] border border-slate-100 shadow-xl">
-              <BarChart3 className="h-16 w-16 text-slate-200 mx-auto mb-6" />
-              <h3 className="text-2xl font-black text-slate-900 font-display">Analytics Engine</h3>
-              <p className="text-sm font-medium text-slate-400 mt-2">Advanced metrics and growth tracking coming soon.</p>
-            </div>
-          )}
+          {activeTab === 'ANALYTICS' && renderAnalyticsTab()}
           {activeTab === 'SETTINGS' && (
             <div className="p-20 text-center bg-white rounded-[3.5rem] border border-slate-100 shadow-xl">
               <Settings className="h-16 w-16 text-slate-200 mx-auto mb-6" />
@@ -446,12 +725,11 @@ export default function AdminPanel({ user }: { user: any }) {
 
                 <div className="grid grid-cols-1 gap-4">
                   {[
-                    { id: 'free', name: 'Free Plan', plan: 'free', planId: 'free', color: 'bg-slate-50 text-slate-600' },
-                    { id: 'trial', name: 'Free Trial (2 Days)', plan: 'pro', planId: 'trial', color: 'bg-blue-50 text-blue-600' },
+                    { id: 'trial', name: 'Free Trial (7 Days)', plan: 'pro', planId: 'trial', color: 'bg-blue-50 text-blue-600' },
                     { id: 'max', name: 'ListingAI Max (3 Days)', plan: 'pro', planId: 'max', color: 'bg-rose-50 text-rose-600' },
-                    { id: 'monthly', name: '1 Month Pro', plan: 'pro', planId: 'monthly', color: 'bg-indigo-50 text-indigo-600' },
-                    { id: 'half-yearly', name: '6 Month Pro', plan: 'pro', planId: 'half-yearly', color: 'bg-purple-50 text-purple-600' },
-                    { id: 'yearly', name: '1 Year Pro', plan: 'pro', planId: 'yearly', color: 'bg-amber-50 text-amber-600' }
+                    { id: 'monthly', name: '1 Month Pro (30 Days)', plan: 'pro', planId: 'monthly', color: 'bg-indigo-50 text-indigo-600' },
+                    { id: 'half-yearly', name: '6 Month Pro (180 Days)', plan: 'pro', planId: 'half-yearly', color: 'bg-purple-50 text-purple-600' },
+                    { id: 'yearly', name: '1 Year Pro (365 Days)', plan: 'pro', planId: 'yearly', color: 'bg-amber-50 text-amber-600' }
                   ].map((p) => (
                     <button
                       key={p.id}

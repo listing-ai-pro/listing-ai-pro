@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { trackUsage, checkLimit, USAGE_LIMITS } from '../lib/usage';
+import { trackUsage, checkLimit, PLAN_LIMITS } from '../lib/usage';
 import { useUsage } from '../hooks/useUsage';
+import { trackAction } from '../lib/actions';
 import { generateGeminiContent } from '../lib/gemini';
 import { compressImage } from '../lib/utils';
 import { isPlanActive } from '../lib/subscription';
@@ -9,7 +10,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { UploadCloud, Image as ImageIcon, Loader2, Download, AlertCircle, Check, Copy, Lock } from 'lucide-react';
 
 export default function WhiteBackground({ user }: { user: any }) {
-  const { usage } = useUsage(user.uid);
+  const { usage } = useUsage(user);
   const isActive = isPlanActive(user);
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -63,9 +64,12 @@ export default function WhiteBackground({ user }: { user: any }) {
     setLoading(true);
     setErrorMsg('');
     try {
-      const isWithinLimit = await checkLimit(user.uid, 'whiteBackgrounds');
+      trackAction('White Background Removal', { hasImage: !!image });
+      const isWithinLimit = await checkLimit(user, 'whiteBackgrounds');
       if (!isWithinLimit) {
-        setErrorMsg(`Daily white background limit reached (${USAGE_LIMITS.whiteBackgrounds}/${USAGE_LIMITS.whiteBackgrounds}). Please try again tomorrow.`);
+        const planId = user.activePlanId || 'trial';
+        const limit = PLAN_LIMITS[planId]?.whiteBackgrounds || 2;
+        setErrorMsg(`Daily white background limit reached (${limit}/${limit}). Please try again tomorrow.`);
         setLoading(false);
         return;
       }
@@ -83,7 +87,8 @@ export default function WhiteBackground({ user }: { user: any }) {
       };
 
       const response = await generateGeminiContent({
-        contents
+        contents,
+        modelName: 'gemini-2.5-flash-image'
       });
 
       if (response.image) {
@@ -127,7 +132,7 @@ export default function WhiteBackground({ user }: { user: any }) {
             <div className="pt-4">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Contact Admin on WhatsApp to Upgrade</p>
               <a 
-                href="https://wa.me/919876543210?text=Hi, I want to upgrade my plan for ListingAI."
+                href={`https://wa.me/919023654443?text=${encodeURIComponent(`Hi, I want to upgrade my plan for ListingAI.\n\nSeller ID: ${user.sellerId || user.uid?.substring(0, 8)}\nEmail: ${user.email}`)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="block w-full py-5 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/20"
@@ -141,36 +146,36 @@ export default function WhiteBackground({ user }: { user: any }) {
 
       {/* Header Section */}
       <div className="relative">
-        <div className="max-w-3xl">
+        <div className="max-w-3xl text-center lg:text-left">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 mb-6"
           >
             <ImageIcon className="h-4 w-4 text-blue-600" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">Studio Enhancement</span>
+            <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-blue-600">Studio Enhancement</span>
           </motion.div>
-          <h2 className="text-5xl lg:text-7xl font-black tracking-tight text-slate-900 mb-6 font-display leading-[0.9]">
+          <h2 className="text-4xl lg:text-7xl font-black tracking-tight text-slate-900 mb-6 font-display leading-[1.1] lg:leading-[0.9]">
             Pure White <span className="text-blue-600">Canvas</span>.
           </h2>
-          <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-slate-200 shadow-sm w-fit mb-6">
+          <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-slate-200 shadow-sm w-full lg:w-fit mb-6">
             <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
               <ImageIcon className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Daily Credits</p>
+            <div className="flex-1 lg:flex-none">
+              <p className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Daily Credits</p>
               <div className="flex items-center gap-3">
                 <div className="h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-blue-600 transition-all duration-500" 
-                    style={{ width: `${Math.min(100, (usage.whiteBackgrounds / USAGE_LIMITS.whiteBackgrounds) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (usage.whiteBackgrounds / (PLAN_LIMITS[user.activePlanId || 'trial']?.whiteBackgrounds || 2)) * 100)}%` }}
                   ></div>
                 </div>
-                <span className="text-xs font-black text-slate-900">{usage.whiteBackgrounds} / {USAGE_LIMITS.whiteBackgrounds}</span>
+                <span className="text-xs font-black text-slate-900 whitespace-nowrap">{usage.whiteBackgrounds} / {PLAN_LIMITS[user.activePlanId || 'trial']?.whiteBackgrounds || 2}</span>
               </div>
             </div>
           </div>
-          <p className="text-xl font-medium text-slate-500 leading-relaxed max-w-xl">
+          <p className="text-base lg:text-xl font-medium text-slate-500 leading-relaxed max-w-xl mx-auto lg:mx-0">
             Transform your product photos into professional e-commerce listings with a pure white background. Perfect for Amazon, eBay, and Shopify.
           </p>
         </div>
@@ -192,35 +197,35 @@ export default function WhiteBackground({ user }: { user: any }) {
         </motion.div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Input Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-8"
+          className="space-y-6 lg:space-y-8"
         >
           <div 
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`relative aspect-square rounded-[3.5rem] border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center p-10 group overflow-hidden ${
+            className={`relative aspect-square rounded-[2.5rem] lg:rounded-[3.5rem] border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center p-6 lg:p-10 group overflow-hidden ${
               image ? 'border-blue-500 bg-white shadow-2xl' : 'border-slate-100 bg-slate-50 hover:bg-white hover:border-blue-300 hover:shadow-xl'
             }`}
           >
             {image ? (
               <div className="relative w-full h-full">
-                <img src={image} alt="Original" className="w-full h-full object-contain rounded-[2rem]" referrerPolicy="no-referrer" />
-                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-[2rem]">
-                  <span className="text-white font-black text-xs uppercase tracking-widest">Change Image</span>
+                <img src={image} alt="Original" className="w-full h-full object-contain rounded-[1.5rem] lg:rounded-[2rem]" referrerPolicy="no-referrer" />
+                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-[1.5rem] lg:rounded-[2rem]">
+                  <span className="text-white font-black text-[10px] lg:text-xs uppercase tracking-widest">Change Image</span>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col items-center text-center">
-                <div className="h-24 w-24 rounded-[2rem] bg-blue-50 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                  <UploadCloud className="h-10 w-10 text-blue-600" />
+                <div className="h-16 w-16 lg:h-24 lg:w-24 rounded-[1.5rem] lg:rounded-[2rem] bg-blue-50 flex items-center justify-center mb-6 lg:mb-8 group-hover:scale-110 transition-transform">
+                  <UploadCloud className="h-8 w-8 lg:h-10 lg:w-10 text-blue-600" />
                 </div>
-                <p className="text-2xl font-black text-slate-900 mb-2 font-display">Drop product photo</p>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Drag & drop or click to browse</p>
+                <p className="text-xl lg:text-2xl font-black text-slate-900 mb-2 font-display">Drop product photo</p>
+                <p className="text-[10px] lg:text-xs font-bold text-slate-400 uppercase tracking-widest">Drag & drop or click to browse</p>
               </div>
             )}
             <input 
@@ -235,7 +240,7 @@ export default function WhiteBackground({ user }: { user: any }) {
           <button
             onClick={generateWhiteBG}
             disabled={!image || loading}
-            className={`w-full py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 shadow-xl ${
+            className={`w-full py-5 lg:py-6 rounded-[1.5rem] lg:rounded-[2rem] font-black text-[10px] lg:text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 shadow-xl ${
               !image || loading
                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
                 : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/20 active:scale-95'

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { trackUsage, checkLimit, USAGE_LIMITS } from '../lib/usage';
+import { trackUsage, checkLimit, PLAN_LIMITS } from '../lib/usage';
 import { useUsage } from '../hooks/useUsage';
+import { trackAction } from '../lib/actions';
 import { generateGeminiContent } from '../lib/gemini';
 import { isPlanActive } from '../lib/subscription';
 import { trackEvent, trackCustom } from '../lib/pixel';
@@ -17,7 +18,7 @@ import {
 } from 'recharts';
 
 export default function MarketIntelligence({ user }: { user: any }) {
-  const { usage } = useUsage(user.uid);
+  const { usage } = useUsage(user);
   const isActive = isPlanActive(user);
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<any>(null);
@@ -28,9 +29,12 @@ export default function MarketIntelligence({ user }: { user: any }) {
     setLoading(true);
     setErrorMsg('');
     try {
-      const isWithinLimit = await checkLimit(user.uid, 'marketAnalysis');
+      trackAction('Market Analysis', { query });
+      const isWithinLimit = await checkLimit(user, 'marketAnalysis');
       if (!isWithinLimit) {
-        setErrorMsg(`Daily market analysis limit reached (${USAGE_LIMITS.marketAnalysis}/${USAGE_LIMITS.marketAnalysis}). Please try again tomorrow.`);
+        const planId = user.activePlanId || 'trial';
+        const limit = PLAN_LIMITS[planId]?.marketAnalysis || 3;
+        setErrorMsg(`Daily market analysis limit reached (${limit}/${limit}). Please try again tomorrow.`);
         setLoading(false);
         return;
       }
@@ -128,7 +132,7 @@ export default function MarketIntelligence({ user }: { user: any }) {
             <div className="pt-4">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Contact Admin on WhatsApp to Upgrade</p>
               <a 
-                href="https://wa.me/919876543210?text=Hi, I want to upgrade my plan for ListingAI."
+                href={`https://wa.me/919023654443?text=${encodeURIComponent(`Hi, I want to upgrade my plan for ListingAI.\n\nSeller ID: ${user.sellerId || user.uid?.substring(0, 8)}\nEmail: ${user.email}`)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="block w-full py-5 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/20"
@@ -142,37 +146,37 @@ export default function MarketIntelligence({ user }: { user: any }) {
 
       {/* Hero Section */}
       <div className="relative">
-        <div className="max-w-3xl">
+        <div className="max-w-3xl text-center lg:text-left">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 mb-6"
           >
             <Globe className="h-4 w-4 text-blue-600" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">Global Market Intelligence</span>
+            <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-blue-600">Global Market Intelligence</span>
           </motion.div>
-          <h2 className="text-5xl lg:text-7xl font-black tracking-tight text-slate-900 mb-6 font-display leading-[0.9]">
+          <h2 className="text-4xl lg:text-7xl font-black tracking-tight text-slate-900 mb-6 font-display leading-[1.1] lg:leading-[0.9]">
             Know Your <span className="text-blue-600">Market</span>,<br />
             Beat the Odds.
           </h2>
-          <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-slate-200 shadow-sm w-fit mb-6">
+          <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-slate-200 shadow-sm w-full lg:w-fit mb-6">
             <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
               <Globe className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Daily Credits</p>
+            <div className="flex-1 lg:flex-none">
+              <p className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Daily Credits</p>
               <div className="flex items-center gap-3">
                 <div className="h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-blue-600 transition-all duration-500" 
-                    style={{ width: `${Math.min(100, (usage.marketAnalysis / USAGE_LIMITS.marketAnalysis) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (usage.marketAnalysis / (PLAN_LIMITS[user.activePlanId || 'trial']?.marketAnalysis || 3)) * 100)}%` }}
                   ></div>
                 </div>
-                <span className="text-xs font-black text-slate-900">{usage.marketAnalysis} / {USAGE_LIMITS.marketAnalysis}</span>
+                <span className="text-xs font-black text-slate-900 whitespace-nowrap">{usage.marketAnalysis} / {PLAN_LIMITS[user.activePlanId || 'trial']?.marketAnalysis || 3}</span>
               </div>
             </div>
           </div>
-          <p className="text-xl font-medium text-slate-500 leading-relaxed max-w-xl">
+          <p className="text-base lg:text-xl font-medium text-slate-500 leading-relaxed max-w-xl mx-auto lg:mx-0">
             Uncover competitor secrets, pricing benchmarks, and market gaps using real-time AI search and data visualization.
           </p>
         </div>
@@ -182,12 +186,12 @@ export default function MarketIntelligence({ user }: { user: any }) {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full bg-white p-3 rounded-[3rem] border border-slate-100 shadow-2xl relative z-10"
+        className="w-full bg-white p-2 lg:p-3 rounded-[2rem] lg:rounded-[3rem] border border-slate-100 shadow-2xl relative z-10"
       >
-        <div className="flex flex-col md:flex-row gap-3">
+        <div className="flex flex-col lg:flex-row gap-2 lg:gap-3">
           <div className="relative flex-1">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-8">
-              <Search className="h-6 w-6 text-slate-300" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-6 lg:pl-8">
+              <Search className="h-5 w-5 lg:h-6 lg:w-6 text-slate-300" />
             </div>
             <input
               type="text"
@@ -195,13 +199,13 @@ export default function MarketIntelligence({ user }: { user: any }) {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && analyzeMarket()}
               placeholder="Enter product name, category, or competitor URL..."
-              className="block w-full rounded-[2rem] border-0 bg-slate-50 py-6 pl-18 pr-8 text-slate-900 placeholder-slate-300 focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all font-bold text-lg"
+              className="block w-full rounded-[1.5rem] lg:rounded-[2rem] border-0 bg-slate-50 py-4 lg:py-6 pl-14 lg:pl-18 pr-6 lg:pr-8 text-slate-900 placeholder-slate-300 focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all font-bold text-sm lg:text-lg"
             />
           </div>
           <button
             onClick={analyzeMarket}
             disabled={loading || !query}
-            className={`px-12 py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all shadow-xl ${
+            className={`px-8 lg:px-12 py-4 lg:py-6 rounded-[1.5rem] lg:rounded-[2rem] font-black text-[10px] lg:text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 lg:gap-4 transition-all shadow-xl ${
               loading || !query
                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                 : 'bg-slate-900 text-white hover:bg-blue-600 shadow-blue-600/20 active:scale-95'

@@ -81,17 +81,17 @@ const AIDemoAnimation = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-800">
         {/* Left: Input */}
-        <div className="p-5 md:p-6 lg:p-8 bg-[#0a0c10]">
+        <div className="p-4 sm:p-6 lg:p-8 bg-[#0a0c10]">
           <div className="space-y-4 md:space-y-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-slate-500">
                 <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Step 1: Input Image</span>
+                <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em]">Step 1: Input Image</span>
               </div>
               <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest bg-slate-900 px-2 py-1 rounded-md">Raw Photo</span>
             </div>
             
-            <div className="relative aspect-square rounded-xl md:rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center group shadow-2xl max-w-[320px] mx-auto">
+            <div className="relative aspect-square rounded-xl md:rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center group shadow-2xl max-w-[280px] sm:max-w-[320px] mx-auto">
               <img 
                 key="product"
                 src="https://www.dropbox.com/scl/fi/xgkm1coqy0to4ytpwil63/1.jpeg?rlkey=q2iyu5xtcfn27nknu582zxxdk&st=zfrbbvfl&dl=1"
@@ -116,12 +116,12 @@ const AIDemoAnimation = () => {
         </div>
 
         {/* Right: Output */}
-        <div className="p-5 md:p-6 lg:p-8 bg-[#0d1117]">
-          <div className="space-y-5 md:space-y-6">
+        <div className="p-4 sm:p-6 lg:p-8 bg-[#0d1117]">
+          <div className="space-y-4 md:space-y-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-slate-500">
                 <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Step 2: AI Transformation</span>
+                <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em]">Step 2: AI Transformation</span>
               </div>
               <div className="px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[8px] font-black uppercase tracking-widest">
                 Meesho Optimized
@@ -332,15 +332,15 @@ export default function Dashboard() {
         <motion.section variants={itemVariants} className="text-center space-y-8 pt-10 px-4">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 mb-4">
             <TrendingUp className="h-4 w-4 text-blue-600" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">Meesho Growth Engine</span>
+            <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-blue-600">Meesho Growth Engine</span>
           </div>
           
-          <h1 className="text-4xl md:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight font-display">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight font-display">
             Meesho Pe Sales Nahi Aa Rahi? <br />
             <span className="text-blue-600">Shipping Kharcha Kam Karo! 🚚</span>
           </h1>
           
-          <p className="text-lg md:text-xl font-medium text-slate-500 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl font-medium text-slate-500 max-w-2xl mx-auto leading-relaxed">
             Shipping charges zyada hone ki wajah se orders nahi mil rahe? Hamara AI tool aapke product ka weight aur packaging optimize karega aur SEO listings se orders 10x badhayega! 🚀
           </p>
 

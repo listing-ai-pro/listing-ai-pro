@@ -31,13 +31,13 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import { useUsage } from '../hooks/useUsage';
-import { USAGE_LIMITS } from '../lib/usage';
+import { PLAN_LIMITS } from '../lib/usage';
 import { isPlanActive } from '../lib/subscription';
 import { collection, query, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export default function UserDashboard({ user, onTabChange }: { user: any, onTabChange?: (tab: string) => void }) {
-  const { usage } = useUsage(user.uid);
+  const { usage } = useUsage(user);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [totalSaved, setTotalSaved] = useState(0);
 
@@ -48,13 +48,16 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
     if (!isActive) {
       return "Aapka plan expire ho gaya hai. Naya plan buy karein taaki aap tools use kar sakein.";
     }
-    if (usage.listingsGenerated < USAGE_LIMITS.listingsGenerated / 2) {
-      return `Aaj kam se kam ${USAGE_LIMITS.listingsGenerated / 2} listings optimize karein taaki aapka search rank top pe aaye aur sales badhe.`;
+    const planId = user.activePlanId || 'trial';
+    const limits = PLAN_LIMITS[planId] || PLAN_LIMITS.trial;
+    
+    if (usage.listingsGenerated < limits.listingsGenerated / 2) {
+      return `Aaj kam se kam ${limits.listingsGenerated / 2} listings optimize karein taaki aapka search rank top pe aaye aur sales badhe.`;
     }
-    if (usage.whiteBackgrounds < USAGE_LIMITS.whiteBackgrounds) {
+    if (usage.whiteBackgrounds < limits.whiteBackgrounds) {
       return "Aapki product photos ka background remove karein, professional images se conversion rate 40% tak badh sakta hai.";
     }
-    if (usage.marketAnalysis < USAGE_LIMITS.marketAnalysis / 2) {
+    if (usage.marketAnalysis < limits.marketAnalysis / 2) {
       return "Market intelligence tool use karein aur dekhein competitors kya price pe sell kar rahe hain, isse aap apni pricing behtar kar sakte hain.";
     }
     return "Aapka performance behtar hai! Naye trending products add karke apna catalog expand karein aur market share badhayein.";
@@ -131,26 +134,36 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
       )}
 
       {/* 1. WELCOME & QUICK STATS */}
-      <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <motion.div variants={itemVariants} className="lg:col-span-2 p-8 rounded-[2.5rem] bg-slate-900 text-white relative overflow-hidden group">
+      <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <motion.div variants={itemVariants} className="sm:col-span-2 p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] bg-slate-900 text-white relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[100px] -mr-32 -mt-32 opacity-20 transition-transform group-hover:scale-110"></div>
           <div className="relative space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 text-blue-400">
-                <Zap className="h-5 w-5 fill-blue-400" />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Advanced Dashboard</span>
+                <Zap className="h-4 w-4 lg:h-5 lg:w-5 fill-blue-400" />
+                <span className="text-[8px] lg:text-[10px] font-black uppercase tracking-[0.3em]">Advanced Dashboard</span>
               </div>
-              <div className={`px-4 py-1.5 rounded-xl border flex items-center gap-2 ${!isActive ? 'bg-red-500/10 border-red-500/20 text-red-400' : isPro ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'}`}>
+              <div className={`px-3 lg:px-4 py-1 lg:py-1.5 rounded-xl border flex items-center gap-2 ${!isActive ? 'bg-red-500/10 border-red-500/20 text-red-400' : isPro ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'}`}>
                 {!isActive ? <Lock className="h-3 w-3" /> : isPro ? <Crown className="h-3 w-3 fill-emerald-400" /> : <Zap className="h-3 w-3" />}
-                <span className="text-[9px] font-black uppercase tracking-widest">{!isActive ? 'Plan Expired' : isPro ? 'Pro Member' : 'Free Plan'}</span>
+                <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest">
+                  {!isActive ? 'Plan Expired' : 
+                   user.activePlanId === 'max' ? 'ListingAI Max' : 
+                   user.activePlanId === 'monthly' ? 'Monthly Pro' :
+                   user.activePlanId === 'half-yearly' ? '6 Month Pro' :
+                   user.activePlanId === 'yearly' ? 'Yearly Pro' : 
+                   isPro ? 'Pro Member' : 'No Active Plan'}
+                </span>
               </div>
             </div>
-            <h2 className="text-3xl font-black font-display">Welcome back, {user.displayName?.split(' ')[0] || 'Seller'}! 👋</h2>
-            <p className="text-slate-400 text-sm font-medium max-w-md leading-relaxed">
+            <h2 className="text-2xl lg:text-3xl font-black font-display">Welcome back, {user.displayName?.split(' ')[0] || 'Seller'}! 👋</h2>
+            <p className="text-slate-400 text-xs lg:text-sm font-medium max-w-md leading-relaxed">
               Aapka business grow kar raha hai! {getGrowthSuggestion()}
             </p>
-            <div className="pt-4 flex gap-4">
-              <button className="px-6 py-3 rounded-2xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20">
+            <div className="pt-2 lg:pt-4 flex flex-wrap gap-3 lg:gap-4">
+              <button 
+                onClick={() => onTabChange?.('Listing Generator')}
+                className="flex-1 sm:flex-none px-6 py-3 rounded-xl lg:rounded-2xl bg-blue-600 text-white text-[9px] lg:text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20"
+              >
                 New Listing
               </button>
               <button 
@@ -158,7 +171,7 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
                   trackCustom('UpgradeClick', { location: 'Dashboard Welcome', userEmail: user.email });
                   onTabChange?.('Subscription');
                 }}
-                className="px-6 py-3 rounded-2xl bg-white/10 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all flex items-center gap-2"
+                className="flex-1 sm:flex-none px-6 py-3 rounded-xl lg:rounded-2xl bg-white/10 border border-white/10 text-white text-[9px] lg:text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all flex items-center justify-center gap-2"
               >
                 <CreditCard className="h-3 w-3" />
                 {isPro ? 'Manage Plan' : 'Upgrade Now'}
@@ -167,29 +180,29 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-sm space-y-4">
-          <div className="h-12 w-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-            <TrendingUp className="h-6 w-6" />
+        <motion.div variants={itemVariants} className="p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] bg-white border border-slate-100 shadow-sm space-y-4">
+          <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">SEO Health</p>
-            <p className="text-3xl font-black text-slate-900">{usage.listingsGenerated > 0 ? '91%' : '0%'}</p>
+            <p className="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">SEO Health</p>
+            <p className="text-2xl lg:text-3xl font-black text-slate-900">{usage.listingsGenerated > 0 ? '91%' : '0%'}</p>
           </div>
-          <div className="flex items-center gap-2 text-emerald-500 text-[10px] font-black">
+          <div className="flex items-center gap-2 text-emerald-500 text-[9px] lg:text-[10px] font-black">
             <ArrowUpRight className="h-3 w-3" />
             {usage.listingsGenerated > 0 ? '+12% THIS WEEK' : 'START OPTIMIZING'}
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-sm space-y-4">
-          <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
-            <Search className="h-6 w-6" />
+        <motion.div variants={itemVariants} className="p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] bg-white border border-slate-100 shadow-sm space-y-4">
+          <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+            <Search className="h-5 w-5 lg:h-6 lg:w-6" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Market Reach</p>
-            <p className="text-3xl font-black text-slate-900">{usage.marketAnalysis > 0 ? 'High' : 'Low'}</p>
+            <p className="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Market Reach</p>
+            <p className="text-2xl lg:text-3xl font-black text-slate-900">{usage.marketAnalysis > 0 ? 'High' : 'Low'}</p>
           </div>
-          <div className="flex items-center gap-2 text-blue-500 text-[10px] font-black">
+          <div className="flex items-center gap-2 text-blue-500 text-[9px] lg:text-[10px] font-black">
             <ArrowUpRight className="h-3 w-3" />
             {usage.marketAnalysis > 0 ? 'EXPANDING' : 'NEEDS ANALYSIS'}
           </div>
@@ -197,14 +210,14 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
       </motion.div>
 
       {/* 2. ADVANCED TOOLS GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        <div className="lg:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
+        <div className="lg:col-span-2 space-y-6 lg:space-y-8">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-black text-slate-900 font-display">Advanced AI Tools 🛠️</h3>
-            <button className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">View All Tools</button>
+            <h3 className="text-lg lg:text-xl font-black text-slate-900 font-display">Advanced AI Tools 🛠️</h3>
+            <button className="text-[9px] lg:text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">View All Tools</button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
             {[
               { 
                 title: "Listing Generator", 
@@ -253,7 +266,9 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
               }
             ].map((tool, i) => {
               const used = usage[tool.usageKey as keyof typeof usage] || 0;
-              const limit = USAGE_LIMITS[tool.usageKey as keyof typeof usage] || 10;
+              const planId = user.activePlanId || 'trial';
+              const limits = PLAN_LIMITS[planId] || PLAN_LIMITS.trial;
+              const limit = limits[tool.usageKey as keyof typeof usage] || 10;
               const percentage = Math.min(100, (used / limit) * 100);
               
               return (
@@ -261,35 +276,35 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
                   key={i}
                   whileHover={tool.restricted ? {} : { y: -5 }}
                   onClick={() => tool.restricted && onTabChange?.('Subscription')}
-                  className={`p-8 rounded-[2rem] bg-white border border-slate-100 shadow-sm transition-all group cursor-pointer relative overflow-hidden ${
+                  className={`p-6 lg:p-8 rounded-[2rem] bg-white border border-slate-100 shadow-sm transition-all group cursor-pointer relative overflow-hidden ${
                     tool.restricted ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-xl hover:border-blue-100'
                   }`}
                 >
                   {tool.restricted && (
                     <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[2px] flex items-center justify-center z-10">
-                      <div className="bg-white px-4 py-2 rounded-xl shadow-xl border border-slate-100 flex items-center gap-2">
+                      <div className="bg-white px-3 lg:px-4 py-1.5 lg:py-2 rounded-xl shadow-xl border border-slate-100 flex items-center gap-2">
                         <ShieldCheck className="h-3 w-3 text-blue-600" />
-                        <span className="text-[8px] font-black uppercase tracking-widest text-slate-900">Upgrade Required</span>
+                        <span className="text-[7px] lg:text-[8px] font-black uppercase tracking-widest text-slate-900">Upgrade Required</span>
                       </div>
                     </div>
                   )}
-                  <div className="flex justify-between items-start mb-6">
-                    <div className={`h-12 w-12 rounded-2xl ${tool.color} flex items-center justify-center`}>
-                      <tool.icon className="h-6 w-6" />
+                  <div className="flex justify-between items-start mb-4 lg:mb-6">
+                    <div className={`h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl ${tool.color} flex items-center justify-center`}>
+                      <tool.icon className="h-5 w-5 lg:h-6 lg:w-6" />
                     </div>
                     {tool.badge && (
-                      <span className="text-[8px] font-black px-2 py-1 rounded-lg bg-slate-900 text-white uppercase tracking-widest">
+                      <span className="text-[7px] lg:text-[8px] font-black px-2 py-1 rounded-lg bg-slate-900 text-white uppercase tracking-widest">
                         {tool.badge}
                       </span>
                     )}
                   </div>
-                  <h4 className="text-lg font-black text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">{tool.title}</h4>
-                  <p className="text-xs font-medium text-slate-500 leading-relaxed mb-6">{tool.desc}</p>
+                  <h4 className="text-base lg:text-lg font-black text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">{tool.title}</h4>
+                  <p className="text-[11px] lg:text-xs font-medium text-slate-500 leading-relaxed mb-4 lg:mb-6">{tool.desc}</p>
                   
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Usage</span>
-                      <span className="text-[9px] font-black text-slate-900">{used} / {limit}</span>
+                      <span className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase tracking-widest">Usage</span>
+                      <span className="text-[8px] lg:text-[9px] font-black text-slate-900">{used} / {limit}</span>
                     </div>
                     <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                       <div 
@@ -297,7 +312,7 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
                         style={{ width: `${percentage}%` }}
                       ></div>
                     </div>
-                    <p className="text-[8px] font-bold text-slate-400 text-right uppercase tracking-widest">
+                    <p className="text-[7px] lg:text-[8px] font-bold text-slate-400 text-right uppercase tracking-widest">
                       {limit - used} Remaining
                     </p>
                   </div>
@@ -307,18 +322,18 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
           </div>
 
           {/* GROWTH CHART */}
-          <div className="bg-white rounded-[3rem] p-10 border border-slate-100 shadow-sm space-y-8">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-[2rem] lg:rounded-[3rem] p-6 lg:p-10 border border-slate-100 shadow-sm space-y-6 lg:space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-xl font-black text-slate-900 font-display">Orders Performance</h3>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Weekly Growth Analytics</p>
+                <h3 className="text-lg lg:text-xl font-black text-slate-900 font-display">Orders Performance</h3>
+                <p className="text-[9px] lg:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Weekly Growth Analytics</p>
               </div>
               <div className="flex gap-2">
-                <button className="px-4 py-2 rounded-xl bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500">7 Days</button>
-                <button className="px-4 py-2 rounded-xl bg-blue-600 text-[10px] font-black uppercase tracking-widest text-white">30 Days</button>
+                <button className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-slate-50 text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-slate-500">7 Days</button>
+                <button className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-blue-600 text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">30 Days</button>
               </div>
             </div>
-            <div className="h-[300px] w-full">
+            <div className="h-[250px] lg:h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={growthData}>
                   <defs>
@@ -388,7 +403,10 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
                 ? "Aapne abhi tak 5 listings optimize nahi ki hain. Shuru karein aur sales badhayein!"
                 : "Aapki listings ka SEO score behtar ho sakta hai. Inhe optimize karke aap search visibility 3x badha sakte hain."}
             </p>
-            <button className="w-full py-4 rounded-2xl bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all shadow-xl shadow-orange-600/20">
+            <button 
+              onClick={() => onTabChange?.('Listing Generator')}
+              className="w-full py-4 rounded-2xl bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all shadow-xl shadow-orange-600/20"
+            >
               {usage.listingsGenerated < 5 ? "Start Now" : "Fix Now"}
             </button>
           </div>
@@ -400,9 +418,14 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
               <p className="text-slate-400 text-xs font-medium leading-relaxed">
                 Hamare experts se baat karein aur apne Meesho business ko scale karein.
               </p>
-              <button className="flex items-center gap-2 text-blue-400 text-[10px] font-black uppercase tracking-widest hover:text-blue-300 transition-colors">
+              <a 
+                href={`https://wa.me/919023654443?text=${encodeURIComponent(`Hi, I need help with ListingAI.\n\nSeller ID: ${user.sellerId || user.uid?.substring(0, 8)}\nEmail: ${user.email}`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 text-blue-400 text-[10px] font-black uppercase tracking-widest hover:text-blue-300 transition-colors"
+              >
                 Contact Support <ArrowUpRight className="h-4 w-4" />
-              </button>
+              </a>
             </div>
           </div>
 

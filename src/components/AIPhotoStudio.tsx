@@ -1,115 +1,191 @@
 import React, { useState, useRef } from 'react';
-import { trackUsage, checkLimit, USAGE_LIMITS } from '../lib/usage';
+import { trackUsage, checkLimit, PLAN_LIMITS } from '../lib/usage';
 import { useUsage } from '../hooks/useUsage';
-import { generateGeminiContent } from '../lib/gemini';
+import { trackAction } from '../lib/actions';
+import { 
+  analyzeProductImage, 
+  suggestPhotoshootSettings, 
+  generateBackgroundImage, 
+  generateProductStudioImage, 
+  generateVirtualTryOn,
+  generateMockupImage 
+} from '../lib/geminiService';
 import { compressImage } from '../lib/utils';
 import { isPlanActive } from '../lib/subscription';
-import { trackEvent, trackCustom } from '../lib/pixel';
+import { trackCustom } from '../lib/pixel';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Copy, Check, Camera, Loader2, UploadCloud, Image as ImageIcon, 
+  Camera, Loader2, UploadCloud, Image as ImageIcon, 
   AlertCircle, Sparkles, Zap, Box, Shirt, Monitor, 
   ChevronRight, Settings2, Wand2, Palette, Layers, Download, User, Lock
 } from 'lucide-react';
 
 export default function AIPhotoStudio({ user }: { user: any }) {
-  const { usage } = useUsage(user.uid);
+  const { usage } = useUsage(user);
   const isActive = isPlanActive(user);
-  const [mode, setMode] = useState<'APPAREL' | 'PRODUCT' | 'MOCKUP'>('APPAREL');
+  const [mode, setMode] = useState<'APPAREL' | 'PRODUCT' | 'MOCKUP'>('PRODUCT');
   const [activeTab, setActiveTab] = useState<'Model' | 'Apparel'>('Apparel');
-  const [prompt, setPrompt] = useState('');
-  const [pose, setPose] = useState('Full Body Front');
-  const [background, setBackground] = useState('');
-  const [realismBoost, setRealismBoost] = useState(true);
-  const [result, setResult] = useState('');
+  const [step, setStep] = useState(0); // 0: Idle, 1: Analysis, 2: Settings, 3: Background, 4: Render
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [productImage, setProductImage] = useState<string | null>(null);
+  const [modelImage, setModelImage] = useState<string | null>(null);
+  const [designImage, setDesignImage] = useState<string | null>(null);
+  const [settings, setSettings] = useState<any>({});
+  const [prompt, setPrompt] = useState('');
+  const [pose, setPose] = useState('Full Body Front');
+  const [handStyling, setHandStyling] = useState('Neutral');
+  const [expression, setExpression] = useState('Neutral');
+  const [cameraAngle, setCameraAngle] = useState('Eye-Level');
+  const [focalLength, setFocalLength] = useState('35mm (Wide)');
+  const [aspectRatio, setAspectRatio] = useState('Portrait');
+  const [numImages, setNumImages] = useState(1);
+  const [background, setBackground] = useState('');
+  const [realismBoost, setRealismBoost] = useState(true);
+  const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const mockupPresets = [
+    { name: 'White T-Shirt', url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=800', type: 'Apparel' },
+    { name: 'Black T-Shirt', url: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&q=80&w=800', type: 'Apparel' },
+    { name: 'White Mug', url: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&q=80&w=800', type: 'Home' },
+    { name: 'Canvas Tote', url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=800', type: 'Accessory' },
+    { name: 'Hoodie', url: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=800', type: 'Apparel' },
+    { name: 'Phone Case', url: 'https://images.unsplash.com/photo-1541873676947-d7922523d38e?auto=format&fit=crop&q=80&w=800', type: 'Tech' },
+  ];
+
+  const poseCategories = {
+    STANDARD: ['Full Body Front', 'Hand on Hip', 'Back View', '3/4 View', 'Profile View', 'Waist-Up'],
+    ETHNIC: ['Pallu Display', 'Ethnic Twirl', 'Traditional Namaste', 'Royal Seated', 'Walking Gracefully', 'Short Kurti Silhouette', 'Side Slit Focus', 'Chic Cross-Legged'],
+    CREATIVE: ['Walking Motion', 'Elegant Lean', 'Sitting Pose', 'Candid Look', 'Hero Pose', 'Action Pose', 'Looking Over Shoulder', 'Leaning Forward', 'Hands in Pockets', 'Dynamic Twirl', 'POV Selfie', 'POV Mirror Selfie']
+  };
+
+  const handStylingOptions = ['Neutral', 'Hand on Hip', 'Both Hands on Hips', 'Hands in Pockets', 'Adjusting Sleeve', 'Fixing Hair', 'Holding Hem', 'Hands Folded', 'One Hand on Shoulder', 'Adjusting Collar'];
+  const expressionOptions = ['Neutral', 'Soft Smile', 'Confident', 'Joyful', 'Serious', 'Playful', 'Serene'];
+  const cameraAngleOptions = ['Eye-Level', 'Low Angle', 'High Angle', 'Dutch Angle', 'Worm\'s Eye View', 'Bird\'s Eye View'];
+  const focalLengthOptions = ['24mm (Ultra-Wide)', '35mm (Wide)', '50mm (Standard)', '85mm (Portrait)', '135mm (Telephoto)'];
+  const aspectRatioOptions = ['Portrait', 'Square', 'Landscape', 'Stories'];
+  const numImagesOptions = [1, 2, 4, 6, 8];
+
+  const steps = [
+    { id: 1, title: 'Analysis', desc: 'AI Image Analysis' },
+    { id: 2, title: 'Settings', desc: 'Smart Suggestions' },
+    { id: 3, title: 'Background', desc: 'Background Generation' },
+    { id: 4, title: 'Render', desc: 'Final Synthesis' }
+  ];
 
   const poses = ['Full Body Front', 'Hand on Hip', 'Back View', '3/4 View'];
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 20 * 1024 * 1024) {
-      setErrorMsg('Image size too large. Please upload an image smaller than 20MB.');
-      return;
-    }
-
+    setUploading(true);
     try {
       const compressed = await compressImage(file);
-      setProductImage(compressed);
+      if (mode === 'MOCKUP') {
+        if (activeTab === 'Design') {
+          setDesignImage(compressed);
+        } else {
+          setProductImage(compressed);
+        }
+      } else if (activeTab === 'Model') {
+        setModelImage(compressed);
+      } else {
+        setProductImage(compressed);
+      }
       setResultImage(null);
       setErrorMsg('');
     } catch (error) {
-      console.error('Error compressing image:', error);
-      setErrorMsg('Failed to process image. Please try another one.');
+      setErrorMsg('Failed to process image.');
+    } finally {
+      setUploading(false);
     }
   };
 
-  const generateImage = async () => {
+  const runAutoMagic = async () => {
+    // For Apparel/Product/Mockup, we need the main asset.
+    // For Apparel, we also need the model image.
+    const assetImage = productImage;
+    if (!assetImage) {
+      setErrorMsg('Please upload the main product/apparel image.');
+      return;
+    }
+    
     setLoading(true);
     setErrorMsg('');
     try {
-      const isWithinLimit = await checkLimit(user.uid, 'photoshoots');
+      trackAction('AI Photoshoot', { mode, pose, cameraAngle, focalLength });
+      const isWithinLimit = await checkLimit(user, 'photoshoots');
       if (!isWithinLimit) {
-        setErrorMsg(`Daily photoshoot limit reached (${USAGE_LIMITS.photoshoots}/${USAGE_LIMITS.photoshoots}). Please try again tomorrow.`);
-        setLoading(false);
-        return;
+        const planId = user.activePlanId || 'trial';
+        const limit = PLAN_LIMITS[planId]?.photoshoots || 0;
+        throw new Error(`Daily limit reached (${limit}/${limit})`);
       }
 
-      const contents = {
-        parts: [
-          { text: `Generate a high-quality, professional ${mode.toLowerCase()} photo for: ${prompt}. 
-          Pose/Angle: ${pose}. 
-          Background: ${background || 'Clean studio'}. 
-          Realism Boost: ${realismBoost ? 'Enabled (Ultra-realistic textures and lighting)' : 'Standard'}.
-          The result must be a realistic, high-resolution image suitable for an e-commerce listing.` },
-          ...(productImage ? [{
-            inlineData: {
-              data: productImage.split(',')[1],
-              mimeType: productImage.split(';')[0].split(':')[1]
-            }
-          }] : [])
-        ]
-      };
-
-      const data = await generateGeminiContent({
-        contents
-      });
+      // 1. Analysis
+      setStep(1);
+      const analysis = await analyzeProductImage(assetImage);
       
-      if (data.image) {
-        setResultImage(data.image);
-        setResult(data.text || '');
-        await trackUsage(user.uid, 'photoshoots');
-        
-        // Track Facebook Pixel Event
-        trackCustom('PhotoStudioGenerated', { 
-          mode, 
+      // 2. Settings
+      setStep(2);
+      const suggestedSettings = await suggestPhotoshootSettings(assetImage, mode);
+      setSettings(suggestedSettings);
+      
+      // 3. Background
+      setStep(3);
+      const bgImage = await generateBackgroundImage(suggestedSettings.background || prompt);
+      
+      // 4. Render
+      setStep(4);
+      let finalImage;
+      if (mode === 'APPAREL') {
+        if (!modelImage) throw new Error('Please upload a model image for Virtual Try-On.');
+        finalImage = await generateVirtualTryOn({ 
+          productImage: assetImage, 
+          modelImage: modelImage,
           pose,
-          userEmail: user.email,
-          userId: user.uid
+          handStyling,
+          expression,
+          cameraAngle,
+          focalLength,
+          aspectRatio,
+          ...suggestedSettings 
+        });
+      } else if (mode === 'MOCKUP') {
+        if (!designImage) throw new Error('Please upload a design/graphic image for Mockup.');
+        finalImage = await generateMockupImage({ 
+          productImage: assetImage, 
+          designImage: designImage,
+          cameraAngle,
+          focalLength,
+          aspectRatio,
+          ...suggestedSettings 
         });
       } else {
-        throw new Error('AI did not return an image. Please try again with a different prompt.');
+        finalImage = await generateProductStudioImage({ 
+          productImage: assetImage, 
+          pose,
+          cameraAngle,
+          focalLength,
+          aspectRatio,
+          numImages,
+          ...suggestedSettings 
+        });
+      }
+      
+      if (finalImage) {
+        setResultImage(`data:${finalImage.mimeType};base64,${finalImage.data}`);
+        await trackUsage(user.uid, 'photoshoots');
+        trackCustom('PhotoStudioGenerated', { mode, pose, userEmail: user.email, userId: user.uid });
       }
     } catch (error: any) {
-      console.error('Error generating image:', error);
-      setErrorMsg(error.message || 'An error occurred while generating the image.');
+      setErrorMsg(error.message);
     } finally {
       setLoading(false);
+      setStep(0);
     }
-  };
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(result);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -130,6 +206,17 @@ export default function AIPhotoStudio({ user }: { user: any }) {
     if (file) {
       const event = { target: { files: [file] } } as any;
       handleFileChange(event);
+    }
+  };
+
+  const handleModeChange = (m: 'APPAREL' | 'PRODUCT' | 'MOCKUP') => {
+    setMode(m);
+    if (m === 'MOCKUP') {
+      setActiveTab('Product');
+    } else if (m === 'APPAREL') {
+      setActiveTab('Apparel');
+    } else {
+      setActiveTab('Apparel');
     }
   };
 
@@ -154,7 +241,7 @@ export default function AIPhotoStudio({ user }: { user: any }) {
             <div className="pt-4">
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6">Contact Admin on WhatsApp to Upgrade</p>
               <a 
-                href="https://wa.me/919876543210?text=Hi, I want to upgrade my plan for ListingAI."
+                href={`https://wa.me/919023654443?text=${encodeURIComponent(`Hi, I want to upgrade my plan for ListingAI.\n\nSeller ID: ${user.sellerId || user.uid?.substring(0, 8)}\nEmail: ${user.email}`)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="block w-full py-5 rounded-2xl bg-blue-600 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20"
@@ -167,108 +254,89 @@ export default function AIPhotoStudio({ user }: { user: any }) {
       )}
 
       {/* Top Toolbar */}
-      <div className="bg-[#1e293b] rounded-3xl p-4 mb-8 flex items-center justify-between border border-slate-800 shadow-2xl">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-4 border-r border-slate-700 pr-8">
-            <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
+      <div className="bg-[#0f172a]/50 backdrop-blur-xl rounded-[2rem] p-4 mb-8 flex flex-col lg:flex-row items-center justify-between gap-4 border border-slate-800/50 shadow-2xl">
+        <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-6 w-full lg:w-auto">
+          <div className="flex items-center gap-3 border-b sm:border-b-0 sm:border-r border-slate-800 pb-4 sm:pb-0 sm:pr-6 w-full sm:w-auto justify-center sm:justify-start">
+            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
               <Camera className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <h2 className="text-lg font-black text-white leading-none tracking-tighter">STUDIO <span className="text-blue-500">PRO</span></h2>
-              <div className="flex items-center gap-1.5 mt-1">
-                <Zap className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                <span className="text-[8px] font-black uppercase tracking-widest text-yellow-500">Elite Access</span>
-              </div>
-            </div>
+            <h2 className="text-lg font-black text-white leading-none tracking-tighter">STUDIO <span className="text-blue-500">PRO</span></h2>
           </div>
 
-          <div className="flex items-center gap-6 border-r border-slate-700 pr-8">
+          {/* Credits Display */}
+          <div className="flex items-center gap-3 bg-slate-950/50 px-4 py-2 rounded-2xl border border-slate-800 w-full sm:w-auto justify-center sm:justify-start">
+            <Sparkles className="h-4 w-4 text-blue-500" />
             <div>
-              <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-1">Daily Limit</p>
-              <div className="flex items-center gap-3">
-                <div className="h-1 w-20 bg-slate-800 rounded-full overflow-hidden">
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Daily Credits</p>
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 w-20 bg-slate-800 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-red-500 transition-all duration-500" 
-                    style={{ width: `${Math.min(100, (usage.photoshoots / USAGE_LIMITS.photoshoots) * 100)}%` }}
+                    className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 transition-all duration-500" 
+                    style={{ width: `${Math.min(100, (usage.photoshoots / (PLAN_LIMITS[user.activePlanId || 'trial']?.photoshoots || 1)) * 100)}%` }}
                   ></div>
                 </div>
-                <span className="text-[10px] font-black text-white">{usage.photoshoots} / {USAGE_LIMITS.photoshoots}</span>
+                <span className="text-[10px] font-black text-white">{usage.photoshoots} / {PLAN_LIMITS[user.activePlanId || 'trial']?.photoshoots || 0}</span>
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="flex items-center gap-2 bg-slate-900/50 p-1 rounded-2xl border border-slate-800">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+          <div className="flex items-center gap-1 bg-slate-950/50 p-1 rounded-2xl border border-slate-800 w-full sm:w-auto">
             {(['APPAREL', 'PRODUCT', 'MOCKUP'] as const).map((m) => (
               <button
                 key={m}
-                onClick={() => setMode(m)}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+                onClick={() => handleModeChange(m)}
+                className={`flex-1 sm:flex-none px-4 lg:px-5 py-2.5 rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all ${
                   mode === m 
-                    ? 'bg-white text-slate-900 shadow-xl' 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
                     : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
-                {m === 'APPAREL' && <Shirt className="h-3 w-3" />}
-                {m === 'PRODUCT' && <Box className="h-3 w-3" />}
-                {m === 'MOCKUP' && <Monitor className="h-3 w-3" />}
                 {m}
               </button>
             ))}
           </div>
 
-          <div className="flex items-center gap-6 ml-4">
-            <div className="flex items-center gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Neural Engine Active</span>
-            </div>
-            <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">V2.5 Ultra-HD</div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button className="px-6 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all border border-slate-700 flex items-center gap-2">
-            <Wand2 className="h-3.5 w-3.5" />
-            Auto-Magic Shoot
-          </button>
           <button 
-            onClick={generateImage}
-            disabled={loading || !prompt}
-            className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-xl ${
-              loading || !prompt
+            onClick={runAutoMagic}
+            disabled={loading}
+            className={`w-full sm:w-auto px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-xl ${
+              loading
                 ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-600/20 active:scale-95'
+                : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 shadow-blue-600/20 active:scale-95'
             }`}
           >
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Palette className="h-3.5 w-3.5" />}
-            Render Masterpiece
+            {loading ? 'Processing...' : 'Auto-Magic Shoot'}
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-200px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:h-[calc(100vh-200px)]">
         {/* Left Sidebar - Asset Management */}
         <div className="lg:col-span-3 flex flex-col gap-6">
           <div className="bg-[#1e293b] rounded-[2.5rem] border border-slate-800 p-6 flex-1 flex flex-col shadow-xl">
             <div className="flex items-center gap-2 bg-slate-900/50 p-1 rounded-2xl border border-slate-800 mb-6">
-              {(['Model', 'Apparel'] as const).map((tab) => (
+              {(mode === 'MOCKUP' ? ['Product', 'Design'] : ['Model', 'Apparel']).map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
+                  onClick={() => setActiveTab(tab as any)}
+                  className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
                     activeTab === tab 
-                      ? 'bg-white text-slate-900 shadow-xl' 
-                      : 'text-slate-500 hover:text-slate-300'
+                      ? 'bg-blue-600 text-white shadow-lg' 
+                      : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
                   }`}
                 >
-                  {tab === 'Model' ? <User className="h-3 w-3" /> : <Shirt className="h-3 w-3" />}
+                  {tab === 'Model' ? <User className="h-3 w-3" /> : tab === 'Design' ? <Wand2 className="h-3 w-3" /> : <Shirt className="h-3 w-3" />}
                   {tab}
                 </button>
               ))}
             </div>
 
             <div 
-              className={`flex-1 border-2 border-dashed rounded-[2rem] flex flex-col items-center justify-center p-8 transition-all cursor-pointer group ${
-                dragActive ? 'border-blue-500 bg-blue-500/5' : 'border-slate-800 bg-slate-900/30 hover:border-slate-700 hover:bg-slate-900/50'
+              className={`flex-1 border-2 border-dashed rounded-[2rem] flex flex-col items-center justify-center p-6 transition-all cursor-pointer group relative overflow-hidden ${
+                dragActive ? 'border-blue-500 bg-blue-500/10' : 'border-slate-800 bg-slate-950 hover:border-blue-500/50 hover:bg-slate-900/50'
               }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -277,35 +345,98 @@ export default function AIPhotoStudio({ user }: { user: any }) {
               onClick={() => fileInputRef.current?.click()}
             >
               <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-              {productImage ? (
-                <div className="relative w-full h-full flex items-center justify-center">
-                  <img src={productImage} alt="Asset" className="max-w-full max-h-full object-contain rounded-xl" referrerPolicy="no-referrer" />
-                  <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Change Image</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <div className="h-16 w-16 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <Shirt className="h-8 w-8 text-blue-500" />
-                  </div>
-                  <p className="text-sm font-black text-white mb-1">Add {activeTab.toLowerCase()} images</p>
-                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Drop one or more items</p>
+              
+              {uploading && (
+                <div className="absolute inset-0 z-20 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
+                  <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+                  <p className="text-[10px] font-black text-white uppercase tracking-widest">Processing Image...</p>
                 </div>
               )}
+
+              {activeTab === 'Model' ? (
+                modelImage ? (
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <img src={modelImage} alt="Model" className="max-w-full max-h-full object-contain rounded-xl" referrerPolicy="no-referrer" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-xl transition-opacity">
+                      <p className="text-white text-xs font-black uppercase tracking-widest">Change Model</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <div className="h-16 w-16 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-600 transition-colors">
+                      <User className="h-8 w-8 text-slate-400 group-hover:text-white" />
+                    </div>
+                    <p className="text-sm font-black text-white">Upload Model</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest">For Virtual Try-On</p>
+                  </div>
+                )
+              ) : activeTab === 'Design' ? (
+                designImage ? (
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+                    <img src={designImage} alt="Design" className="max-w-full max-h-full object-contain rounded-xl relative z-10 drop-shadow-2xl" referrerPolicy="no-referrer" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-xl transition-opacity z-20">
+                      <p className="text-white text-xs font-black uppercase tracking-widest">Change Design</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <div className="h-16 w-16 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-600 transition-colors">
+                      <Wand2 className="h-8 w-8 text-slate-400 group-hover:text-white" />
+                    </div>
+                    <p className="text-sm font-black text-white">Upload Design</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest">PNG/Graphic/Logo</p>
+                  </div>
+                )
+              ) : (
+                productImage ? (
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <img src={productImage} alt="Asset" className="max-w-full max-h-full object-contain rounded-xl" referrerPolicy="no-referrer" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-xl transition-opacity">
+                      <p className="text-white text-xs font-black uppercase tracking-widest">Change Product</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <div className="h-16 w-16 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-600 transition-colors">
+                      <Shirt className="h-8 w-8 text-slate-400 group-hover:text-white" />
+                    </div>
+                    <p className="text-sm font-black text-white">Upload Product</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest">Blank Item Image</p>
+                  </div>
+                )
+              )}
             </div>
-            
-            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center mt-4">
-              Drag to reorder layers (inner to outer).
-            </p>
+
+            {/* Mockup Presets */}
+            {mode === 'MOCKUP' && activeTab === 'Product' && (
+              <div className="mt-6 pt-6 border-t border-slate-800">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4">Quick Presets</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {mockupPresets.map((preset, i) => (
+                    <button
+                      key={i}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setProductImage(preset.url);
+                      }}
+                      className="group relative aspect-square rounded-xl overflow-hidden border border-slate-800 hover:border-blue-500 transition-all"
+                    >
+                      <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity">
+                        <p className="text-[8px] font-black text-white uppercase tracking-tighter text-center px-1">{preset.name}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Main Preview Area */}
         <div className="lg:col-span-6 flex flex-col">
           <div className="bg-[#020617] rounded-[3.5rem] border border-slate-800 flex-1 flex flex-col items-center justify-center relative overflow-hidden shadow-2xl group">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.05)_0%,transparent_70%)]"></div>
-            
             <AnimatePresence mode="wait">
               {resultImage ? (
                 <motion.div
@@ -314,40 +445,13 @@ export default function AIPhotoStudio({ user }: { user: any }) {
                   animate={{ opacity: 1, scale: 1 }}
                   className="w-full h-full p-12 flex items-center justify-center relative z-10"
                 >
-                  <img src={resultImage} alt="Studio Result" className="max-w-full max-h-full object-contain drop-shadow-[0_0_50px_rgba(59,130,246,0.2)]" referrerPolicy="no-referrer" />
-                  <div className="absolute top-8 right-8 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={() => {
-                        const link = document.createElement('a');
-                        link.href = resultImage;
-                        link.download = 'studio-masterpiece.png';
-                        link.click();
-                      }}
-                      className="h-12 w-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all"
-                    >
-                      <Download className="h-5 w-5" />
-                    </button>
-                    <button 
-                      onClick={handleCopy}
-                      className="h-12 px-6 rounded-2xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20"
-                    >
-                      {copied ? 'Copied' : 'Copy Prompt'}
-                    </button>
-                  </div>
+                  <img src={resultImage} alt="Studio Result" className="max-w-full max-h-full object-contain" referrerPolicy="no-referrer" />
                 </motion.div>
               ) : (
-                <motion.div
-                  key="placeholder"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-center relative z-10"
-                >
-                  <div className="h-24 w-24 rounded-[2.5rem] bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto mb-8 shadow-inner">
-                    <ImageIcon className="h-10 w-10 text-slate-700" />
-                  </div>
+                <div className="text-center">
+                  <ImageIcon className="h-10 w-10 text-slate-700 mx-auto mb-4" />
                   <h3 className="text-2xl font-black text-slate-700 uppercase tracking-[0.2em] font-display">Awaiting Production</h3>
-                  <p className="text-[10px] font-black text-slate-800 uppercase tracking-[0.3em] mt-2">Configure assets and settings to begin</p>
-                </motion.div>
+                </div>
               )}
             </AnimatePresence>
 
@@ -362,86 +466,164 @@ export default function AIPhotoStudio({ user }: { user: any }) {
 
         {/* Right Sidebar - Settings */}
         <div className="lg:col-span-3 flex flex-col gap-6 overflow-y-auto pr-2 hide-scrollbar">
-          {/* Engine Settings */}
-          <div className="bg-[#1e293b] rounded-[2.5rem] border border-slate-800 p-8 shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Settings2 className="h-4 w-4 text-slate-400" />
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Engine Settings</h4>
+          <div className="bg-[#1e293b] rounded-[2.5rem] border border-slate-800 p-8 shadow-xl space-y-8">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-white mb-2">Engine Settings</h4>
+            
+            {/* Aspect Ratio */}
+            <div className="space-y-4">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Aspect Ratio</p>
+              <div className="flex flex-wrap gap-2">
+                {aspectRatioOptions.map((ratio) => (
+                  <button
+                    key={ratio}
+                    onClick={() => setAspectRatio(ratio)}
+                    className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+                      aspectRatio === ratio ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Monitor className="h-3 w-3" />
+                    {ratio}
+                  </button>
+                ))}
               </div>
-              <button 
-                onClick={() => setRealismBoost(!realismBoost)}
-                className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${
-                  realismBoost ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-500'
-                }`}
-              >
-                Realism Boost {realismBoost ? 'On' : 'Off'}
-              </button>
             </div>
 
-            <div className="space-y-8">
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-4">Background</p>
-                <button className="w-full py-4 rounded-2xl bg-slate-900/50 border border-slate-800 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center gap-3 mb-4">
-                  <UploadCloud className="h-4 w-4" />
-                  Upload Custom Background
-                </button>
-
-                <div className="bg-slate-900/80 rounded-3xl border border-slate-800 p-6 space-y-4">
-                  <div className="flex items-center gap-2 text-blue-500 mb-2">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    <span className="text-[9px] font-black uppercase tracking-widest">AI Background Generator</span>
-                  </div>
-                  <textarea
-                    value={background}
-                    onChange={(e) => setBackground(e.target.value)}
-                    placeholder="Describe the background scene you want to create..."
-                    className="w-full h-32 bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs font-medium text-slate-300 placeholder:text-slate-700 focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all resize-none"
-                  />
-                  <div className="grid grid-cols-2 gap-3">
-                    <button className="py-3 rounded-xl bg-slate-800 text-slate-400 text-[9px] font-black uppercase tracking-widest hover:bg-slate-700 hover:text-white transition-all flex items-center justify-center gap-2">
-                      <Zap className="h-3 w-3" />
-                      Generate
-                    </button>
-                    <button className="py-3 rounded-xl bg-slate-800 text-slate-400 text-[9px] font-black uppercase tracking-widest hover:bg-slate-700 hover:text-white transition-all flex items-center justify-center gap-2">
-                      <Wand2 className="h-3 w-3" />
-                      Auto-Magic
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-4">Suggested Background</p>
-                  <button className="w-full py-6 rounded-3xl bg-slate-500/20 border border-slate-500/10 flex items-center justify-center group hover:bg-slate-500/30 transition-all">
-                    <div className="flex items-center gap-3 px-6 py-2 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 text-[9px] font-black uppercase tracking-widest group-hover:bg-blue-600 group-hover:text-white transition-all">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      AI Suggestion
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-3 mb-6">
-                  <Layers className="h-4 w-4 text-slate-400" />
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Shot Type & Pose</h4>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {poses.map((p) => (
+            {/* Number of Images */}
+            {mode === 'PRODUCT' && (
+              <div className="space-y-4">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Number of Images</p>
+                <div className="flex gap-2">
+                  {numImagesOptions.map((num) => (
                     <button
-                      key={p}
-                      onClick={() => setPose(p)}
-                      className={`py-3 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-left ${
-                        pose === p 
-                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
-                          : 'bg-slate-900/50 border border-slate-800 text-slate-500 hover:text-slate-300'
+                      key={num}
+                      onClick={() => setNumImages(num)}
+                      className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all ${
+                        numImages === num ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      {p}
+                      {num}
                     </button>
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* Shot Type & Pose */}
+            {(mode === 'APPAREL' || mode === 'PRODUCT') && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 text-blue-400">
+                  <Zap className="h-4 w-4 fill-blue-400" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Shot Type & Pose</p>
+                </div>
+                
+                {Object.entries(poseCategories).map(([category, poses]) => (
+                  <div key={category} className="space-y-3">
+                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">{category}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {poses.map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setPose(p)}
+                          className={`px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all text-left ${
+                            pose === p ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Hand Styling */}
+            {mode === 'APPAREL' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-blue-400">
+                  <Wand2 className="h-4 w-4" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Refined Hand Styling</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {handStylingOptions.map((style) => (
+                    <button
+                      key={style}
+                      onClick={() => setHandStyling(style)}
+                      className={`px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all text-left ${
+                        handStyling === style ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {style}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Model Expression */}
+            {mode === 'APPAREL' && (
+              <div className="space-y-4">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Model Expression</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {expressionOptions.map((exp) => (
+                    <button
+                      key={exp}
+                      onClick={() => setExpression(exp)}
+                      className={`px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all text-left ${
+                        expression === exp ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {exp}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Camera Angle */}
+            <div className="space-y-4">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Camera Angle</p>
+              <div className="grid grid-cols-2 gap-2">
+                {cameraAngleOptions.map((angle) => (
+                  <button
+                    key={angle}
+                    onClick={() => setCameraAngle(angle)}
+                    className={`px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all text-left ${
+                      cameraAngle === angle ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {angle}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Focal Length */}
+            <div className="space-y-4">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Focal Length</p>
+              <div className="grid grid-cols-2 gap-2">
+                {focalLengthOptions.map((focal) => (
+                  <button
+                    key={focal}
+                    onClick={() => setFocalLength(focal)}
+                    className={`px-3 py-2.5 rounded-xl text-[8px] font-black uppercase tracking-tighter transition-all text-left ${
+                      focalLength === focal ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {focal}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-slate-800">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4">Custom Prompt</p>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Describe your product environment, lighting, or specific details..."
+                className="w-full h-32 bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs font-medium text-slate-300 focus:border-blue-500 transition-colors outline-none"
+              />
             </div>
           </div>
         </div>

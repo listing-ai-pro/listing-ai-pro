@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { UsageType, USAGE_LIMITS } from '../lib/usage';
+import { UsageType, PLAN_LIMITS } from '../lib/usage';
 
-export function useUsage(userId: string) {
+export function useUsage(userOrId: any) {
+  const userId = typeof userOrId === 'string' ? userOrId : userOrId?.uid;
+  const planId = typeof userOrId === 'object' ? userOrId?.activePlanId || 'trial' : 'trial';
+  const limits = PLAN_LIMITS[planId] || PLAN_LIMITS.trial;
+
   const [usage, setUsage] = useState<Record<UsageType, number>>({
     listingsGenerated: 0,
     whiteBackgrounds: 0,
@@ -51,12 +55,12 @@ export function useUsage(userId: string) {
   }, [userId]);
 
   const getRemaining = (type: UsageType) => {
-    return Math.max(0, USAGE_LIMITS[type] - usage[type]);
+    return Math.max(0, limits[type] - usage[type]);
   };
 
   const isLimitReached = (type: UsageType) => {
-    return usage[type] >= USAGE_LIMITS[type];
+    return usage[type] >= limits[type];
   };
 
-  return { usage, loading, getRemaining, isLimitReached, USAGE_LIMITS };
+  return { usage, loading, getRemaining, isLimitReached, limits };
 }

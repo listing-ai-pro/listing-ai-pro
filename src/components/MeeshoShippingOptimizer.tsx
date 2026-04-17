@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { trackUsage, checkLimit, USAGE_LIMITS } from '../lib/usage';
+import { trackUsage, checkLimit, PLAN_LIMITS } from '../lib/usage';
 import { useUsage } from '../hooks/useUsage';
+import { trackAction } from '../lib/actions';
 import { generateGeminiContent } from '../lib/gemini';
 import { compressImage } from '../lib/utils';
 import { isPlanActive } from '../lib/subscription';
@@ -13,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export default function MeeshoShippingOptimizer({ user }: { user: any }) {
-  const { usage } = useUsage(user.uid);
+  const { usage } = useUsage(user);
   const isActive = isPlanActive(user);
   const [image, setImage] = useState<string | null>(null);
   const [optimizedImage, setOptimizedImage] = useState<string | null>(null);
@@ -49,9 +50,12 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
     setOptimizing(true);
     setErrorMsg('');
     try {
-      const isWithinLimit = await checkLimit(user.uid, 'shippingOptimizations');
+      trackAction('Meesho Algorithm Hack', { hasImage: !!image });
+      const isWithinLimit = await checkLimit(user, 'shippingOptimizations');
       if (!isWithinLimit) {
-        setErrorMsg(`Daily shipping optimization limit reached (${USAGE_LIMITS.shippingOptimizations}/${USAGE_LIMITS.shippingOptimizations}). Please try again tomorrow.`);
+        const planId = user.activePlanId || 'trial';
+        const limit = PLAN_LIMITS[planId]?.shippingOptimizations || 1;
+        setErrorMsg(`Daily shipping optimization limit reached (${limit}/${limit}). Please try again tomorrow.`);
         setOptimizing(false);
         return;
       }
@@ -69,7 +73,8 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
       };
 
       const data = await generateGeminiContent({
-        contents
+        contents,
+        modelName: 'gemini-2.5-flash-image'
       });
 
       if (data.image) {
@@ -91,9 +96,12 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
     setLoading(true);
     setErrorMsg('');
     try {
-      const isWithinLimit = await checkLimit(user.uid, 'shippingOptimizations');
+      trackAction('Meesho Shipping Optimization', { hasImage: !!image });
+      const isWithinLimit = await checkLimit(user, 'shippingOptimizations');
       if (!isWithinLimit) {
-        setErrorMsg(`Daily shipping optimization limit reached (${USAGE_LIMITS.shippingOptimizations}/${USAGE_LIMITS.shippingOptimizations}). Please try again tomorrow.`);
+        const planId = user.activePlanId || 'trial';
+        const limit = PLAN_LIMITS[planId]?.shippingOptimizations || 1;
+        setErrorMsg(`Daily shipping optimization limit reached (${limit}/${limit}). Please try again tomorrow.`);
         setLoading(false);
         return;
       }
@@ -184,7 +192,7 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
             <div className="pt-4">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Contact Admin on WhatsApp to Upgrade</p>
               <a 
-                href="https://wa.me/919876543210?text=Hi, I want to upgrade my plan for ListingAI."
+                href={`https://wa.me/919023654443?text=${encodeURIComponent(`Hi, I want to upgrade my plan for ListingAI.\n\nSeller ID: ${user.sellerId || user.uid?.substring(0, 8)}\nEmail: ${user.email}`)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="block w-full py-5 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/20"
@@ -198,37 +206,37 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
 
       {/* Header */}
       <div className="relative">
-        <div className="max-w-3xl">
+        <div className="max-w-3xl text-center lg:text-left">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-50 border border-orange-100 mb-6"
           >
             <Zap className="h-4 w-4 text-orange-600" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-orange-600">Logistics Optimization</span>
+            <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-orange-600">Logistics Optimization</span>
           </motion.div>
-          <h2 className="text-5xl lg:text-7xl font-black tracking-tight text-slate-900 mb-6 font-display leading-[0.9]">
+          <h2 className="text-4xl lg:text-7xl font-black tracking-tight text-slate-900 mb-6 font-display leading-[1.1] lg:leading-[0.9]">
             Meesho <span className="text-orange-600">Shipping</span><br />
             Optimizer.
           </h2>
-          <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-slate-200 shadow-sm w-fit mb-6">
+          <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-slate-200 shadow-sm w-full lg:w-fit mb-6">
             <div className="h-10 w-10 rounded-xl bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/20">
               <Zap className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Daily Credits</p>
+            <div className="flex-1 lg:flex-none">
+              <p className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Daily Credits</p>
               <div className="flex items-center gap-3">
                 <div className="h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-orange-600 transition-all duration-500" 
-                    style={{ width: `${Math.min(100, (usage.shippingOptimizations / USAGE_LIMITS.shippingOptimizations) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (usage.shippingOptimizations / (PLAN_LIMITS[user.activePlanId || 'trial']?.shippingOptimizations || 1)) * 100)}%` }}
                   ></div>
                 </div>
-                <span className="text-xs font-black text-slate-900">{usage.shippingOptimizations} / {USAGE_LIMITS.shippingOptimizations}</span>
+                <span className="text-xs font-black text-slate-900 whitespace-nowrap">{usage.shippingOptimizations} / {PLAN_LIMITS[user.activePlanId || 'trial']?.shippingOptimizations || 1}</span>
               </div>
             </div>
           </div>
-          <p className="text-xl font-medium text-slate-500 leading-relaxed max-w-xl">
+          <p className="text-base lg:text-xl font-medium text-slate-500 leading-relaxed max-w-xl mx-auto lg:mx-0">
             Optimize weight & packaging to get the lowest shipping rates on Meesho. Beat the algorithm and save on every order.
           </p>
         </div>
@@ -250,19 +258,19 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
         </motion.div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
         {/* Upload Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-5 space-y-8"
+          className="lg:col-span-5 space-y-6 lg:space-y-8"
         >
-          <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-2xl space-y-10">
+          <div className="bg-white p-6 lg:p-10 rounded-[2.5rem] lg:rounded-[3.5rem] border border-slate-100 shadow-2xl space-y-8 lg:space-y-10">
             <div>
-              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6">Product Analysis</h4>
+              <h4 className="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6">Product Analysis</h4>
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className={`relative h-80 border-2 border-dashed rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden group ${
+                className={`relative h-64 lg:h-80 border-2 border-dashed rounded-[2rem] lg:rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden group ${
                   image ? 'border-orange-500 bg-white' : 'border-slate-100 bg-slate-50 hover:bg-white hover:border-orange-300 hover:shadow-xl'
                 }`}
               >
@@ -276,17 +284,17 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
                 {image ? (
                   <div className="relative w-full h-full p-4">
                     <img src={image} alt="Product" className="w-full h-full object-contain rounded-2xl" referrerPolicy="no-referrer" />
-                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-[2.5rem]">
-                      <span className="text-white font-black text-xs uppercase tracking-widest">Change Image</span>
+                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-[2rem] lg:rounded-[2.5rem]">
+                      <span className="text-white font-black text-[10px] lg:text-xs uppercase tracking-widest">Change Image</span>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center text-center p-8">
-                    <div className="h-20 w-20 rounded-3xl bg-orange-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                      <UploadCloud className="h-10 w-10 text-orange-500" />
+                  <div className="flex flex-col items-center text-center p-6 lg:p-8">
+                    <div className="h-16 w-16 lg:h-20 lg:w-20 rounded-[1.5rem] lg:rounded-3xl bg-orange-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                      <UploadCloud className="h-8 w-8 lg:h-10 lg:w-10 text-orange-500" />
                     </div>
-                    <p className="text-lg font-black text-slate-900 mb-2 font-display">Drop product photo</p>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">AI will estimate weight</p>
+                    <p className="text-base lg:text-lg font-black text-slate-900 mb-2 font-display">Drop product photo</p>
+                    <p className="text-[10px] lg:text-xs font-bold text-slate-400 uppercase tracking-widest">AI will estimate weight</p>
                   </div>
                 )}
               </div>

@@ -47,6 +47,18 @@ export default function Auth() {
           sellerId
         });
       } else {
+        const userData = userDoc.data();
+        // If existing user is not pro and hasn't used trial, give it to them
+        if (userData.subscriptionPlan !== 'pro' && !userData.hasUsedTrial) {
+          await setDoc(userRef, {
+            ...userData,
+            subscriptionPlan: 'pro',
+            activePlanId: 'trial',
+            subscriptionDate: new Date(),
+            hasUsedTrial: true
+          });
+        }
+
         // Track Login Event
         trackEvent('Login', {
           method: 'Google',

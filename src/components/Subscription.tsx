@@ -12,17 +12,17 @@ const plans = [
     subtitle: 'Test the waters',
     price: '0',
     perDay: '0',
-    period: '2 days',
-    duration: '2 DAYS ACCESS',
+    period: '7 days',
+    duration: '7 DAYS ACCESS',
     icon: Sparkles,
     color: 'from-slate-400 to-slate-600',
     bgColor: 'bg-slate-500/10',
     textColor: 'text-slate-500',
     features: [
-      '20 Listings / Day',
-      '5 White Backgrounds / Day',
-      '10 Competitor Analysis / Day',
-      '5 A+ Content / Day',
+      '3 Listings / Day',
+      '2 White Backgrounds / Day',
+      '3 Competitor Analysis / Day',
+      '2 A+ Content / Day',
       'All Marketplaces',
       'SEO Score Analysis',
       '❌ No AI Photoshoot',
@@ -42,22 +42,20 @@ const plans = [
     bgColor: 'bg-rose-500/10',
     textColor: 'text-rose-500',
     features: [
-      '20 Listings / Day',
-      '5 White Backgrounds / Day',
-      '10 Competitor Analysis / Day',
-      '5 A+ Content / Day',
-      'All Marketplaces',
-      'SEO Score Analysis',
-      '4 AI Photoshoot Studio / Day',
-      '5 AI Low Shipping Tool / Day'
+      '10 Listings / Day',
+      '3 White Backgrounds / Day',
+      '5 Competitor Analysis / Day',
+      '3 A+ Content / Day',
+      '3 AI Photoshoot Studio / Day',
+      '3 AI Low Shipping Tool / Day'
     ]
   },
   {
     id: 'monthly',
     name: '1 Month',
     subtitle: 'Casual sellers',
-    price: '499',
-    perDay: '16',
+    price: '399',
+    perDay: '13',
     period: 'month',
     duration: '30 DAYS ACCESS',
     icon: Zap,
@@ -65,37 +63,12 @@ const plans = [
     bgColor: 'bg-blue-500/10',
     textColor: 'text-blue-500',
     features: [
-      '20 Listings / Day',
-      '5 White Backgrounds / Day',
-      '10 Competitor Analysis / Day',
-      '5 A+ Content / Day',
-      'All Marketplaces',
-      'SEO Score Analysis',
-      '4 AI Photoshoot Studio / Day',
-      '5 AI Low Shipping Tool / Day'
-    ]
-  },
-  {
-    id: 'half-yearly',
-    name: '6 Month',
-    subtitle: 'Power sellers',
-    price: '1,499',
-    perDay: '8',
-    period: '6 months',
-    duration: '180 DAYS ACCESS',
-    icon: Calendar,
-    color: 'from-purple-500 to-violet-600',
-    bgColor: 'bg-purple-500/10',
-    textColor: 'text-purple-500',
-    features: [
-      '20 Listings / Day',
-      '5 White Backgrounds / Day',
-      '10 Competitor Analysis / Day',
-      '5 A+ Content / Day',
-      'All Marketplaces',
-      'SEO Score Analysis',
-      '4 AI Photoshoot Studio / Day',
-      '5 AI Low Shipping Tool / Day'
+      '15 Listings / Day',
+      '4 White Backgrounds / Day',
+      '7 Competitor Analysis / Day',
+      '4 A+ Content / Day',
+      '3 AI Photoshoot Studio / Day',
+      '4 AI Low Shipping Tool / Day'
     ]
   },
   {
@@ -116,9 +89,7 @@ const plans = [
       '5 White Backgrounds / Day',
       '10 Competitor Analysis / Day',
       '5 A+ Content / Day',
-      'All Marketplaces',
-      'SEO Score Analysis',
-      '4 AI Photoshoot Studio / Day',
+      '5 AI Photoshoot Studio / Day',
       '5 AI Low Shipping Tool / Day'
     ]
   }
@@ -128,10 +99,13 @@ export default function Subscription({ user }: { user: any }) {
   const [loading, setLoading] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+
   const handleSubscribe = async (planId: string) => {
+    setError(null);
     if (planId === 'trial') {
       if (user.hasUsedTrial) {
-        alert("You have already used your free trial. Please purchase a plan to continue.");
+        setError("You have already used your free trial. Please purchase a plan to continue.");
         return;
       }
       
@@ -161,7 +135,8 @@ export default function Subscription({ user }: { user: any }) {
       });
       
       // Redirect to WhatsApp for paid plans
-      const message = `Hi, I want to subscribe to the ${plans.find(p => p.id === planId)?.name} plan for ListingAI. My email is ${user.email}.`;
+      const sellerId = user.sellerId || (user.uid ? user.uid.substring(0, 8) : 'LAI-UNKNOWN');
+      const message = `Hi, I want to subscribe to the ${plans.find(p => p.id === planId)?.name} plan for ListingAI. \n\nSeller ID: ${sellerId}\nEmail: ${user.email}`;
       const whatsappUrl = `https://wa.me/919023654443?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
     }
@@ -169,7 +144,7 @@ export default function Subscription({ user }: { user: any }) {
 
   return (
     <div className="max-w-7xl mx-auto space-y-12">
-      <div className="text-center space-y-4">
+      <div className="text-center space-y-4 px-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -178,11 +153,27 @@ export default function Subscription({ user }: { user: any }) {
           <Sparkles className="h-3 w-3" />
           Subscription & Billing
         </motion.div>
-        <h2 className="text-5xl font-black text-slate-900 font-display tracking-tight">Choose Your Power</h2>
-        <p className="text-slate-500 text-lg max-w-2xl mx-auto font-medium">
+        <h2 className="text-3xl lg:text-5xl font-black text-slate-900 font-display tracking-tight">Choose Your Power</h2>
+        <p className="text-slate-500 text-base lg:text-lg max-w-2xl mx-auto font-medium">
           Scale your business with AI-driven precision. Select the plan that fits your growth.
         </p>
       </div>
+
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-6 rounded-[2rem] bg-red-50 border border-red-100 text-red-700 flex items-center gap-4 shadow-xl shadow-red-500/10"
+        >
+          <div className="h-12 w-12 rounded-2xl bg-red-500 text-white flex items-center justify-center shadow-lg">
+            <Shield className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="font-black text-lg">Action Required</p>
+            <p className="text-sm font-medium opacity-80">{error}</p>
+          </div>
+        </motion.div>
+      )}
 
       {success && (
         <motion.div
@@ -200,7 +191,7 @@ export default function Subscription({ user }: { user: any }) {
         </motion.div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 px-4">
         {plans.map((plan, index) => (
           <motion.div
             key={plan.id}
@@ -217,43 +208,43 @@ export default function Subscription({ user }: { user: any }) {
               </div>
             )}
 
-            <div className="p-10 flex-1 flex flex-col">
-              <div className="flex items-center justify-between mb-8">
-                <div className={`h-14 w-14 rounded-2xl bg-gradient-to-br ${plan.color} text-white flex items-center justify-center shadow-xl shadow-slate-200`}>
-                  <plan.icon className="h-7 w-7" />
+            <div className="p-8 lg:p-10 flex-1 flex flex-col">
+              <div className="flex items-center justify-between mb-6 lg:mb-8">
+                <div className={`h-12 w-12 lg:h-14 lg:w-14 rounded-2xl bg-gradient-to-br ${plan.color} text-white flex items-center justify-center shadow-xl shadow-slate-200`}>
+                  <plan.icon className="h-6 w-6 lg:h-7 lg:w-7" />
                 </div>
                 {user.subscriptionPlan === 'pro' && user.activePlanId === plan.id && (
-                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1">
+                  <span className="text-[9px] lg:text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1">
                     <Check className="h-3 w-3" /> Current
                   </span>
                 )}
               </div>
 
-              <div className="mb-8">
-                <h3 className="text-2xl font-black text-slate-900 mb-1 font-display">{plan.name}</h3>
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">{plan.subtitle}</p>
+              <div className="mb-6 lg:mb-8">
+                <h3 className="text-xl lg:text-2xl font-black text-slate-900 mb-1 font-display">{plan.name}</h3>
+                <p className="text-slate-400 text-[10px] lg:text-xs font-bold uppercase tracking-widest">{plan.subtitle}</p>
               </div>
 
-              <div className="mb-10">
+              <div className="mb-8 lg:mb-10">
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-slate-900">₹{plan.price}</span>
-                  <span className="text-slate-400 font-bold text-sm">/{plan.period}</span>
+                  <span className="text-3xl lg:text-4xl font-black text-slate-900">₹{plan.price}</span>
+                  <span className="text-slate-400 font-bold text-xs lg:text-sm">/{plan.period}</span>
                 </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 text-[9px] lg:text-[10px] font-black uppercase tracking-widest">
                     Only ₹{plan.perDay}/Day
                   </span>
-                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{plan.duration}</p>
+                  <p className="text-[9px] lg:text-[10px] font-black text-blue-600 uppercase tracking-widest">{plan.duration}</p>
                 </div>
               </div>
 
-              <div className="space-y-4 mb-10 flex-1">
+              <div className="space-y-3 lg:space-y-4 mb-8 lg:mb-10 flex-1">
                 {plan.features.map((feature, i) => (
                   <div key={i} className="flex items-start gap-3 group/item">
-                    <div className={`mt-1 h-5 w-5 rounded-full ${plan.bgColor} flex items-center justify-center flex-shrink-0 transition-transform group-hover/item:scale-110`}>
-                      <Check className={`h-3 w-3 ${plan.textColor}`} />
+                    <div className={`mt-1 h-4 w-4 lg:h-5 lg:w-5 rounded-full ${plan.bgColor} flex items-center justify-center flex-shrink-0 transition-transform group-hover/item:scale-110`}>
+                      <Check className={`h-2.5 w-2.5 lg:h-3 lg:w-3 ${plan.textColor}`} />
                     </div>
-                    <span className="text-sm font-medium text-slate-600 leading-tight">{feature}</span>
+                    <span className="text-xs lg:text-sm font-medium text-slate-600 leading-tight">{feature}</span>
                   </div>
                 ))}
               </div>
@@ -291,25 +282,25 @@ export default function Subscription({ user }: { user: any }) {
         ))}
       </div>
 
-      <div className="bg-slate-900 rounded-[3.5rem] p-12 text-white relative overflow-hidden">
+      <div className="bg-slate-900 rounded-[2.5rem] lg:rounded-[3.5rem] p-8 lg:p-12 text-white relative overflow-hidden mx-4">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600 rounded-full blur-[120px] -mr-64 -mt-64 opacity-20"></div>
         <div className="relative flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="space-y-4 max-w-xl">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/10 text-blue-400 text-[10px] font-black uppercase tracking-widest">
+          <div className="space-y-4 max-w-xl text-center md:text-left">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/10 text-blue-400 text-[9px] lg:text-[10px] font-black uppercase tracking-widest">
               <Shield className="h-3 w-3" />
               Secure Checkout
             </div>
-            <h3 className="text-3xl font-black font-display">Enterprise Security Guaranteed</h3>
-            <p className="text-slate-400 font-medium">
+            <h3 className="text-2xl lg:text-3xl font-black font-display">Enterprise Security Guaranteed</h3>
+            <p className="text-slate-400 text-sm lg:text-base font-medium">
               We use 256-bit SSL encryption to ensure your data and transactions are always safe. No hidden fees, cancel anytime.
             </p>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="h-16 w-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-              <CreditCard className="h-8 w-8 text-slate-400" />
+          <div className="flex items-center gap-4 lg:gap-6">
+            <div className="h-14 w-14 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+              <CreditCard className="h-6 w-6 lg:h-8 lg:w-8 text-slate-400" />
             </div>
-            <div className="h-16 w-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-              <Shield className="h-8 w-8 text-slate-400" />
+            <div className="h-14 w-14 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+              <Shield className="h-6 w-6 lg:h-8 lg:w-8 text-slate-400" />
             </div>
           </div>
         </div>
