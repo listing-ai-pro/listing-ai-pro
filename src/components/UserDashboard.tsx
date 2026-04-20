@@ -16,10 +16,14 @@ import {
   History,
   ShieldCheck,
   AlertCircle,
+  Clock,
   BookOpen,
   Crown,
   CreditCard,
-  Lock
+  Lock,
+  Plus,
+  Sparkles,
+  MessageCircle
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -35,6 +39,40 @@ import { PLAN_LIMITS } from '../lib/usage';
 import { isPlanActive } from '../lib/subscription';
 import { collection, query, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
+import { Variants } from 'motion/react';
+
+const DailyResetTimer = () => {
+  const [timeLeft, setTimeLeft] = useState<{h: number, m: number, s: number}>({ h: 0, m: 0, s: 0 });
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const nextReset = new Date();
+      nextReset.setUTCHours(24, 0, 0, 0);
+      
+      const diff = nextReset.getTime() - now.getTime();
+      
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setTimeLeft({ h, m, s });
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-lg">
+      <Clock className="h-3.5 w-3.5 animate-pulse" />
+      <span className="text-[10px] font-black uppercase tracking-widest font-mono">
+        Reset In: {timeLeft.h}h {timeLeft.m}m {timeLeft.s}s
+      </span>
+    </div>
+  );
+};
 
 export default function UserDashboard({ user, onTabChange }: { user: any, onTabChange?: (tab: string) => void }) {
   const { usage } = useUsage(user);
@@ -53,9 +91,6 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
     
     if (usage.listingsGenerated < limits.listingsGenerated / 2) {
       return `Aaj kam se kam ${limits.listingsGenerated / 2} listings optimize karein taaki aapka search rank top pe aaye aur sales badhe.`;
-    }
-    if (usage.whiteBackgrounds < limits.whiteBackgrounds) {
-      return "Aapki product photos ka background remove karein, professional images se conversion rate 40% tak badh sakta hai.";
     }
     if (usage.marketAnalysis < limits.marketAnalysis / 2) {
       return "Market intelligence tool use karein aur dekhein competitors kya price pe sell kar rahe hain, isse aap apni pricing behtar kar sakte hain.";
@@ -89,7 +124,8 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
     { name: 'Sat', orders: 42 },
     { name: 'Today', orders: usage.listingsGenerated * 3 + 5 }, // Dynamic based on real usage
   ];
-  const containerVariants = {
+
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -97,28 +133,28 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
     }
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-10 pb-20">
+    <div className="max-w-7xl mx-auto space-y-8 pb-16 selection:bg-blue-500/30 font-sans">
       {/* Expiration Banner */}
       {!isActive && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-6 rounded-[2.5rem] bg-red-50 border border-red-100 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-red-500/5"
+          className="p-4 lg:p-6 rounded-[1.5rem] lg:rounded-[2.5rem] bg-red-50 border border-red-100 flex flex-col sm:flex-row items-center justify-between gap-4 lg:gap-6 shadow-xl shadow-red-500/5"
         >
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600 shrink-0">
-              <AlertCircle className="h-6 w-6" />
+          <div className="flex items-center gap-4 text-center sm:text-left">
+            <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-red-100 flex items-center justify-center text-red-600 shrink-0 mx-auto sm:mx-0">
+              <AlertCircle className="h-5 w-5 lg:h-6 lg:w-6" />
             </div>
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-red-400 mb-1">Subscription Expired</p>
-              <h4 className="text-lg font-black text-slate-900">Aapka plan khatam ho gaya hai! 🛑</h4>
-              <p className="text-sm font-medium text-slate-500">Tools use karne ke liye naya plan buy karein.</p>
+              <p className="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] text-red-400 mb-1">Subscription Expired</p>
+              <h4 className="text-base lg:text-lg font-black text-slate-900">Aapka plan khatam ho gaya hai! 🛑</h4>
+              <p className="text-xs lg:text-sm font-medium text-slate-500">Tools use karne ke liye naya plan buy karein.</p>
             </div>
           </div>
           <button
@@ -126,214 +162,326 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
               trackCustom('UpgradeClick', { location: 'Dashboard Banner', userEmail: user.email });
               onTabChange?.('Subscription');
             }}
-            className="px-8 py-4 rounded-2xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/10"
+            className="w-full sm:w-auto px-8 py-3 lg:py-4 rounded-xl lg:rounded-2xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/10 active:scale-95"
           >
             Upgrade Now
           </button>
         </motion.div>
       )}
 
-      {/* 1. WELCOME & QUICK STATS */}
-      <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        <motion.div variants={itemVariants} className="sm:col-span-2 p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] bg-slate-900 text-white relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[100px] -mr-32 -mt-32 opacity-20 transition-transform group-hover:scale-110"></div>
-          <div className="relative space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 text-blue-400">
-                <Zap className="h-4 w-4 lg:h-5 lg:w-5 fill-blue-400" />
-                <span className="text-[8px] lg:text-[10px] font-black uppercase tracking-[0.3em]">Advanced Dashboard</span>
+      {/* 1. WELCOME & QUICK STATS (Bento Header) */}
+      <motion.div 
+        variants={containerVariants} 
+        initial="hidden" 
+        animate="show" 
+        className="grid grid-cols-1 md:grid-cols-6 gap-6"
+      >
+        <motion.div 
+          variants={itemVariants} 
+          className="md:col-span-4 p-6 lg:p-12 rounded-[2rem] lg:rounded-[2.5rem] bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 text-white relative overflow-hidden group shadow-3xl shadow-blue-500/10 border border-white/5"
+        >
+          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500 rounded-full blur-[150px] -mr-80 -mt-80 opacity-20"></div>
+          <div className="relative space-y-6 lg:space-y-8">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md flex items-center gap-2">
+                  <Sparkles className="h-3.5 w-3.5 text-blue-400 fill-blue-400" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.4em] text-blue-400/80 font-mono">Mission: Scale</span>
+                </div>
               </div>
-              <div className={`px-3 lg:px-4 py-1 lg:py-1.5 rounded-xl border flex items-center gap-2 ${!isActive ? 'bg-red-500/10 border-red-500/20 text-red-400' : isPro ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'}`}>
-                {!isActive ? <Lock className="h-3 w-3" /> : isPro ? <Crown className="h-3 w-3 fill-emerald-400" /> : <Zap className="h-3 w-3" />}
-                <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest">
-                  {!isActive ? 'Plan Expired' : 
-                   user.activePlanId === 'max' ? 'ListingAI Max' : 
-                   user.activePlanId === 'monthly' ? 'Monthly Pro' :
-                   user.activePlanId === 'half-yearly' ? '6 Month Pro' :
-                   user.activePlanId === 'yearly' ? 'Yearly Pro' : 
-                   isPro ? 'Pro Member' : 'No Active Plan'}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className={`px-4 py-1.5 rounded-full border flex items-center gap-2 backdrop-blur-xl shadow-lg ${!isActive ? 'bg-red-500/10 border-red-500/20 text-red-400' : isPro ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'}`}>
+                  {!isActive ? <Lock className="h-3 w-3" /> : isPro ? <Crown className="h-3 w-3 fill-emerald-400/50" /> : <Zap className="h-3 w-3" />}
+                  <span className="text-[9px] font-black uppercase tracking-widest">
+                    {!isActive ? 'Account Locked' : user.activePlanId === 'max' ? 'ListingAI MAX' : 'PRO STATUS'}
+                  </span>
+                </div>
+                <div className="scale-90 origin-left">
+                  <DailyResetTimer />
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-3 lg:space-y-4">
+              <h2 className="text-3xl lg:text-6xl font-black font-display tracking-tight leading-[1.1] lg:leading-[0.95]">
+                Swagat hai, <br/>
+                <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent italic font-serif">
+                  {user.displayName?.split(' ')[0] || 'Seller'}
                 </span>
+              </h2>
+              <p className="text-slate-400 text-sm lg:text-lg font-medium max-w-xl leading-relaxed">
+                {getGrowthSuggestion()}
+              </p>
+            </div>
+
+            <div className="pt-4 lg:pt-6 flex flex-col sm:flex-row gap-4 lg:gap-5">
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onTabChange?.('Listing Generator')}
+                className="w-full sm:w-auto px-8 py-4 lg:px-10 lg:py-5 rounded-2xl lg:rounded-3xl bg-blue-600 text-white text-[10px] lg:text-[11px] font-black uppercase tracking-[0.2em] shadow-[0_10px_40px_-10px_rgba(37,99,235,0.6)] flex items-center justify-center gap-3 group relative overflow-hidden"
+              >
+                <Plus className="h-4 w-4 lg:h-5 lg:w-5 group-hover:rotate-180 transition-transform duration-500" />
+                New Listing
+              </motion.button>
+              <button 
+                onClick={() => onTabChange?.('Subscription')}
+                className="w-full sm:w-auto px-8 py-4 lg:px-10 lg:py-5 rounded-2xl lg:rounded-3xl bg-white/5 border border-white/10 text-white text-[10px] lg:text-[11px] font-black uppercase tracking-[0.2em] hover:bg-white/10 transition-all backdrop-blur-md hover:border-white/20"
+              >
+                {isPro ? 'Upgrade Plan' : 'Buy Pro API'}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          variants={itemVariants} 
+          className="md:col-span-2 grid grid-cols-1 gap-6"
+        >
+          <div className="glass-card p-8 rounded-[2.5rem] space-y-4 relative overflow-hidden group">
+            <div className="absolute -right-8 -top-8 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform"></div>
+            <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 relative z-10 glow-blue">
+              <TrendingUp className="h-7 w-7" />
+            </div>
+            <div className="relative z-10 space-y-1">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] font-serif italic">SEO Index</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-5xl font-black text-white font-mono tracking-tighter text-glow">{usage.listingsGenerated > 0 ? '94' : '0'}</p>
+                <span className="text-lg font-black text-slate-500">/100</span>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-400 text-[10px] font-black tracking-widest">
+                <ArrowUpRight className="h-4 w-4" />
+                TOP 1% SELLERS
               </div>
             </div>
-            <h2 className="text-2xl lg:text-3xl font-black font-display">Welcome back, {user.displayName?.split(' ')[0] || 'Seller'}! 👋</h2>
-            <p className="text-slate-400 text-xs lg:text-sm font-medium max-w-md leading-relaxed">
-              Aapka business grow kar raha hai! {getGrowthSuggestion()}
-            </p>
-            <div className="pt-2 lg:pt-4 flex flex-wrap gap-3 lg:gap-4">
-              <button 
-                onClick={() => onTabChange?.('Listing Generator')}
-                className="flex-1 sm:flex-none px-6 py-3 rounded-xl lg:rounded-2xl bg-blue-600 text-white text-[9px] lg:text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20"
-              >
-                New Listing
-              </button>
-              <button 
-                onClick={() => {
-                  trackCustom('UpgradeClick', { location: 'Dashboard Welcome', userEmail: user.email });
-                  onTabChange?.('Subscription');
-                }}
-                className="flex-1 sm:flex-none px-6 py-3 rounded-xl lg:rounded-2xl bg-white/10 border border-white/10 text-white text-[9px] lg:text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all flex items-center justify-center gap-2"
-              >
-                <CreditCard className="h-3 w-3" />
-                {isPro ? 'Manage Plan' : 'Upgrade Now'}
-              </button>
+          </div>
+
+          <div className="glass-card p-8 rounded-[2.5rem] space-y-4 relative overflow-hidden group">
+            <div className="absolute -right-8 -top-8 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform"></div>
+            <div className="h-14 w-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 relative z-10">
+              <Zap className="h-7 w-7" />
             </div>
-          </div>
-        </motion.div>
-
-        <motion.div variants={itemVariants} className="p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] bg-white border border-slate-100 shadow-sm space-y-4">
-          <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-            <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6" />
-          </div>
-          <div>
-            <p className="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">SEO Health</p>
-            <p className="text-2xl lg:text-3xl font-black text-slate-900">{usage.listingsGenerated > 0 ? '91%' : '0%'}</p>
-          </div>
-          <div className="flex items-center gap-2 text-emerald-500 text-[9px] lg:text-[10px] font-black">
-            <ArrowUpRight className="h-3 w-3" />
-            {usage.listingsGenerated > 0 ? '+12% THIS WEEK' : 'START OPTIMIZING'}
-          </div>
-        </motion.div>
-
-        <motion.div variants={itemVariants} className="p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] bg-white border border-slate-100 shadow-sm space-y-4">
-          <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
-            <Search className="h-5 w-5 lg:h-6 lg:w-6" />
-          </div>
-          <div>
-            <p className="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Market Reach</p>
-            <p className="text-2xl lg:text-3xl font-black text-slate-900">{usage.marketAnalysis > 0 ? 'High' : 'Low'}</p>
-          </div>
-          <div className="flex items-center gap-2 text-blue-500 text-[9px] lg:text-[10px] font-black">
-            <ArrowUpRight className="h-3 w-3" />
-            {usage.marketAnalysis > 0 ? 'EXPANDING' : 'NEEDS ANALYSIS'}
+            <div className="relative z-10 space-y-1">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] font-serif italic">Profit Saved</p>
+              <p className="text-5xl font-black text-white font-mono tracking-tighter text-glow">₹{totalSaved || '0'}</p>
+              <div className="flex items-center gap-3 text-blue-400/80 text-[10px] font-black tracking-widest border border-white/5 bg-white/5 w-fit px-4 py-1.5 rounded-2xl">
+                <RefreshCw className="h-3 w-3 animate-spin-slow text-blue-500" />
+                LIVE SYNC
+              </div>
+            </div>
           </div>
         </motion.div>
       </motion.div>
 
-      {/* 2. ADVANCED TOOLS GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
-        <div className="lg:col-span-2 space-y-6 lg:space-y-8">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg lg:text-xl font-black text-slate-900 font-display">Advanced AI Tools 🛠️</h3>
-            <button className="text-[9px] lg:text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">View All Tools</button>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
-            {[
-              { 
-                title: "Listing Generator", 
-                desc: "SEO-optimized titles and descriptions for Meesho.", 
-                icon: FileText, 
-                color: "bg-blue-50 text-blue-600",
-                usageKey: "listingsGenerated"
-              },
-              { 
-                title: "White Background", 
-                desc: "Remove backgrounds and make photos marketplace-ready.", 
-                icon: LayoutGrid, 
-                color: "bg-purple-50 text-purple-600",
-                usageKey: "whiteBackgrounds"
-              },
-              { 
-                title: "AI Photoshoot", 
-                desc: "Generate professional model shots from product photos.", 
-                icon: Camera, 
-                color: "bg-orange-50 text-orange-600",
-                usageKey: "photoshoots",
-                badge: "PRO",
-                restricted: user.activePlanId === 'trial'
-              },
-              { 
-                title: "SEO Health Audit", 
-                desc: "Scan your existing listings and find optimization gaps.", 
-                icon: ShieldCheck, 
-                color: "bg-emerald-50 text-emerald-600",
-                usageKey: "listingsGenerated",
-                restricted: user.activePlanId === 'trial'
-              },
-              { 
-                title: "A+ Content", 
-                desc: "Create high-converting visual product descriptions.", 
-                icon: BookOpen, 
-                color: "bg-pink-50 text-pink-600",
-                usageKey: "aplusGenerated"
-              },
-              { 
-                title: "Competitor Analysis", 
-                desc: "Track prices and keywords of top-selling products.", 
-                icon: Search, 
-                color: "bg-slate-100 text-slate-600",
-                usageKey: "marketAnalysis"
-              }
-            ].map((tool, i) => {
-              const used = usage[tool.usageKey as keyof typeof usage] || 0;
-              const planId = user.activePlanId || 'trial';
-              const limits = PLAN_LIMITS[planId] || PLAN_LIMITS.trial;
-              const limit = limits[tool.usageKey as keyof typeof usage] || 10;
-              const percentage = Math.min(100, (used / limit) * 100);
-              
-              return (
-                <motion.div 
-                  key={i}
-                  whileHover={tool.restricted ? {} : { y: -5 }}
-                  onClick={() => tool.restricted && onTabChange?.('Subscription')}
-                  className={`p-6 lg:p-8 rounded-[2rem] bg-white border border-slate-100 shadow-sm transition-all group cursor-pointer relative overflow-hidden ${
-                    tool.restricted ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-xl hover:border-blue-100'
-                  }`}
-                >
-                  {tool.restricted && (
-                    <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[2px] flex items-center justify-center z-10">
-                      <div className="bg-white px-3 lg:px-4 py-1.5 lg:py-2 rounded-xl shadow-xl border border-slate-100 flex items-center gap-2">
-                        <ShieldCheck className="h-3 w-3 text-blue-600" />
-                        <span className="text-[7px] lg:text-[8px] font-black uppercase tracking-widest text-slate-900">Upgrade Required</span>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Main Productivity Area */}
+        <div className="lg:col-span-8 space-y-8">
+          {/* Advanced Tools Bento Grid */}
+          <div className="space-y-6">
+            <div className="flex items-end justify-between px-4">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.4em] font-mono">AI Engine</p>
+                <h3 className="text-3xl font-black text-white font-display text-glow">Optimization Tools ⚡</h3>
+              </div>
+              <button 
+                onClick={() => onTabChange?.('Listing Generator')}
+                className="text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition-colors"
+              >
+                Expand View
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+              {[
+                { 
+                  title: "Listing Generator", 
+                  desc: "SEO titles & descriptions written by AI.", 
+                  icon: FileText, 
+                  color: "bg-blue-500/10 text-blue-400",
+                  usageKey: "listingsGenerated",
+                  accent: "blue"
+                },
+                { 
+                  title: "A+ Visual Content", 
+                  desc: "Build high-conversion brand story modules.", 
+                  icon: BookOpen, 
+                  color: "bg-pink-500/10 text-pink-400",
+                  usageKey: "aplusGenerated",
+                  accent: "pink"
+                }
+              ].map((tool, i) => {
+                const used = usage[tool.usageKey as keyof typeof usage] || 0;
+                const planId = user.activePlanId || 'trial';
+                const limits = PLAN_LIMITS[planId] || PLAN_LIMITS.trial;
+                const limit = limits[tool.usageKey as keyof typeof usage] || 10;
+                const percentage = Math.min(100, (used / limit) * 100);
+                
+                return (
+                  <motion.div 
+                    key={i}
+                    whileHover={{ y: -8, scale: 1.01 }}
+                    onClick={() => onTabChange?.(tool.title)}
+                    className="p-6 lg:p-8 rounded-[2rem] glass-card transition-all group cursor-pointer relative overflow-hidden flex flex-col justify-between hover:border-white/20 hover:bg-white/10"
+                  >
+                    <div className="space-y-4">
+                      <div className={`h-12 w-12 lg:h-14 lg:w-14 rounded-2xl ${tool.color} flex items-center justify-center border border-white/5`}>
+                        <tool.icon className="h-6 w-6 lg:h-7 lg:w-7" />
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <h4 className="text-lg lg:text-xl font-black text-white group-hover:text-blue-400 transition-colors tracking-tight font-display">{tool.title}</h4>
+                        <p className="text-[10px] lg:text-xs font-medium text-slate-400 leading-relaxed">{tool.desc}</p>
                       </div>
                     </div>
+
+                    <div className="mt-8 lg:mt-10 space-y-3">
+                      <div className="flex justify-between items-center text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] font-mono">
+                        <span className="text-slate-500">Usage Meter</span>
+                        <span className={`${percentage > 90 ? 'text-red-400' : 'text-slate-300'}`}>{used}/{limit}</span>
+                      </div>
+                      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden p-[1px]">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${percentage}%` }}
+                          transition={{ duration: 2, ease: "anticipate" }}
+                          className={`h-full rounded-full transition-all duration-1000 ${
+                            percentage > 90 ? 'bg-gradient-to-r from-red-600 to-red-400 shadow-[0_0_20px_rgba(239,68,68,0.6)]' : 
+                            percentage > 70 ? 'bg-gradient-to-r from-amber-600 to-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.6)]' : 
+                            'bg-gradient-to-r from-blue-600 to-indigo-400 shadow-[0_0_20px_rgba(37,99,235,0.6)]'
+                          }`}
+                        ></motion.div>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Pro Features Cluster */}
+            <div className="p-8 lg:p-12 rounded-[3.5rem] bg-gradient-to-br from-blue-600/10 to-indigo-600/5 border border-blue-500/20 relative overflow-hidden group">
+               <div className="absolute top-0 right-0 p-10 pointer-events-none">
+                  <Crown className="h-32 w-32 text-blue-500/10 -rotate-12 group-hover:scale-110 transition-transform duration-700" />
+               </div>
+               
+               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12 relative z-10">
+                  <div className="space-y-1">
+                     <div className="flex items-center gap-2 text-blue-400 mb-2">
+                        <Crown className="h-4 w-4" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.4em] font-mono italic">Premium Tools</span>
+                     </div>
+                     <h3 className="text-3xl font-black text-white font-display">ListingAI PRO Hub 💎</h3>
+                  </div>
+                  {!isPro && (
+                     <button 
+                        onClick={() => onTabChange?.('Subscription')}
+                        className="px-8 py-4 rounded-2xl bg-blue-600 text-white text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-blue-600/20 hover:bg-blue-500 transition-all active:scale-95"
+                     >
+                        Unlock Pro Forever
+                     </button>
                   )}
-                  <div className="flex justify-between items-start mb-4 lg:mb-6">
-                    <div className={`h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl ${tool.color} flex items-center justify-center`}>
-                      <tool.icon className="h-5 w-5 lg:h-6 lg:w-6" />
-                    </div>
-                    {tool.badge && (
-                      <span className="text-[7px] lg:text-[8px] font-black px-2 py-1 rounded-lg bg-slate-900 text-white uppercase tracking-widest">
-                        {tool.badge}
-                      </span>
-                    )}
-                  </div>
-                  <h4 className="text-base lg:text-lg font-black text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">{tool.title}</h4>
-                  <p className="text-[11px] lg:text-xs font-medium text-slate-500 leading-relaxed mb-4 lg:mb-6">{tool.desc}</p>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase tracking-widest">Usage</span>
-                      <span className="text-[8px] lg:text-[9px] font-black text-slate-900">{used} / {limit}</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full transition-all duration-1000 ${percentage > 90 ? 'bg-red-500' : percentage > 70 ? 'bg-orange-500' : 'bg-blue-600'}`}
-                        style={{ width: `${percentage}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-[7px] lg:text-[8px] font-bold text-slate-400 text-right uppercase tracking-widest">
-                      {limit - used} Remaining
-                    </p>
-                  </div>
-                </motion.div>
-              );
-            })}
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+                  {[
+                    { 
+                      title: "AI Photoshoot", 
+                      desc: "Convert basic photos into professional model lifestyle shots for Meesho.", 
+                      icon: Camera, 
+                      color: "bg-orange-500/10 text-orange-400",
+                      usageKey: "photoshoots",
+                      badge: "PRO",
+                      restricted: user.activePlanId === 'trial',
+                      accent: "orange"
+                    },
+                    { 
+                      title: "Low Shipping", 
+                      desc: "Optimize packaging & weights to drop shipping costs by up to 40%.", 
+                      icon: Zap, 
+                      color: "bg-emerald-500/10 text-emerald-400",
+                      usageKey: "shippingOptimizations",
+                      badge: "PRO",
+                      restricted: user.activePlanId === 'trial',
+                      accent: "emerald",
+                      tabName: "Low Shipping"
+                    },
+                    { 
+                      title: "Bulk Generator", 
+                      desc: "Optimize 20+ products in one go. Scale your entire catalog in minutes.", 
+                      icon: RefreshCw, 
+                      color: "bg-blue-500/10 text-blue-400",
+                      usageKey: "bulkGenerated",
+                      badge: "YEARLY",
+                      restricted: user.activePlanId !== 'yearly',
+                      accent: "blue"
+                    }
+                  ].map((tool, i) => {
+                    const used = usage[tool.usageKey as keyof typeof usage] || 0;
+                    const planId = user.activePlanId || 'trial';
+                    const limits = PLAN_LIMITS[planId] || PLAN_LIMITS.trial;
+                    const limit = limits[tool.usageKey as keyof typeof usage] || 10;
+                    const percentage = Math.min(100, (used / limit) * 100);
+
+                    return (
+                      <motion.div
+                        key={i}
+                        whileHover={tool.restricted ? {} : { scale: 1.02 }}
+                        onClick={() => tool.restricted ? onTabChange?.('Subscription') : onTabChange?.((tool as any).tabName || tool.title)}
+                        className={`p-6 rounded-[2.5rem] bg-slate-950/80 border border-white/5 backdrop-blur-xl relative overflow-hidden group/item cursor-pointer flex flex-col h-full ${
+                          tool.restricted ? 'opacity-80 grayscale-[0.5]' : 'hover:border-blue-500/30'
+                        }`}
+                      >
+                        {tool.restricted && (
+                           <div className="absolute top-4 right-4 z-20">
+                              <Lock className="h-4 w-4 text-slate-500" />
+                           </div>
+                        )}
+                        <div className="space-y-6 flex-1">
+                          <div className={`h-14 w-14 rounded-2xl ${tool.color} flex items-center justify-center border border-white/5 shadow-inner`}>
+                            <tool.icon className="h-7 w-7" />
+                          </div>
+                          <div className="space-y-2">
+                             <div className="flex items-center gap-2">
+                                <h4 className="text-xl font-black text-white tracking-tight font-display">{tool.title}</h4>
+                                <span className="text-[8px] font-black bg-blue-500 text-white px-2 py-0.5 rounded-lg tracking-widest">PRO</span>
+                             </div>
+                             <p className="text-xs font-medium text-slate-400 leading-relaxed">{tool.desc}</p>
+                          </div>
+                        </div>
+                        
+                        {!tool.restricted && (
+                           <div className="mt-8 flex items-center justify-between">
+                              <div className="flex flex-col">
+                                 <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Usage Stat</span>
+                                 <span className="text-xs font-black text-white">{used}/{limit}</span>
+                              </div>
+                              <ArrowUpRight className="h-5 w-5 text-blue-500 group-hover/item:translate-x-1 group-hover/item:-translate-y-1 transition-transform" />
+                           </div>
+                        )}
+                      </motion.div>
+                    )
+                  })}
+               </div>
+            </div>
           </div>
 
-          {/* GROWTH CHART */}
-          <div className="bg-white rounded-[2rem] lg:rounded-[3rem] p-6 lg:p-10 border border-slate-100 shadow-sm space-y-6 lg:space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg lg:text-xl font-black text-slate-900 font-display">Orders Performance</h3>
-                <p className="text-[9px] lg:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Weekly Growth Analytics</p>
+          {/* Detailed Performance Chart */}
+          <div className="glass-card rounded-[2.5rem] p-8 lg:p-12 space-y-8 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-10">
+              <div className="h-40 w-40 bg-blue-600 rounded-full blur-[100px] opacity-10 group-hover:scale-150 transition-transform"></div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-8 relative z-10">
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.5em] font-mono">Performance</p>
+                <h3 className="text-3xl font-black text-white font-display">Optimization Impact 📊</h3>
               </div>
-              <div className="flex gap-2">
-                <button className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-slate-50 text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-slate-500">7 Days</button>
-                <button className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-blue-600 text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">30 Days</button>
+              <div className="flex bg-white/5 p-2 rounded-[1.75rem] border border-white/10 backdrop-blur-xl">
+                <button className="px-6 py-2 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors">7d View</button>
+                <button className="px-6 py-2 rounded-2xl bg-blue-600 shadow-xl text-[11px] font-black uppercase tracking-widest text-white">30d Growth</button>
               </div>
             </div>
-            <div className="h-[250px] lg:h-[300px] w-full">
+
+            <div className="h-[350px] w-full relative z-10 p-4 bg-slate-950/20 rounded-[2.5rem] border border-white/5">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={growthData}>
                   <defs>
@@ -342,123 +490,178 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
                       <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} />
-                  <Tooltip 
-                    contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '15px'}}
-                    itemStyle={{color: '#2563eb', fontWeight: 900, fontSize: '12px'}}
+                  <CartesianGrid strokeDasharray="8 8" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    dy={15}
+                    tick={{fill: '#64748b', fontSize: 10, fontWeight: 900, fontFamily: 'monospace', letterSpacing: '0.1em'}} 
                   />
-                  <Area type="monotone" dataKey="orders" stroke="#2563eb" strokeWidth={4} fillOpacity={1} fill="url(#colorOrdersUser)" />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    dx={-10}
+                    tick={{fill: '#64748b', fontSize: 10, fontWeight: 900, fontFamily: 'monospace'}} 
+                  />
+                  <Tooltip 
+                    cursor={{ stroke: '#2563eb', strokeWidth: 2, strokeDasharray: '4 4' }}
+                    contentStyle={{
+                      borderRadius: '32px', 
+                      border: '1px solid rgba(255,255,255,0.1)', 
+                      boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', 
+                      padding: '24px',
+                      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                      backdropFilter: 'blur(20px)'
+                    }}
+                    labelStyle={{ color: '#94a3b8', fontWeight: 900, fontSize: '10px', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.1em' }}
+                    itemStyle={{color: '#fff', fontWeight: 900, fontSize: '18px'}}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="orders" 
+                    stroke="#2563eb" 
+                    strokeWidth={5} 
+                    fillOpacity={1} 
+                    fill="url(#colorOrdersUser)" 
+                    animationDuration={2500}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
         </div>
 
-        {/* SIDEBAR: RECENT ACTIVITY & ALERTS */}
-        <div className="space-y-8">
-          <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm space-y-8">
-            <div className="flex items-center gap-3">
-              <History className="h-5 w-5 text-slate-400" />
-              <h3 className="text-lg font-black text-slate-900 font-display">Recent Activity</h3>
+        {/* Intelligence Sidebar */}
+        <div className="lg:col-span-4 space-y-8">
+          {/* Quick Insights Card */}
+          <div className="bg-slate-900 rounded-[3.5rem] p-10 lg:p-14 text-white relative overflow-hidden group border border-white/5 shadow-3xl shadow-slate-950/50">
+            <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-600 rounded-full blur-[120px] -mr-40 -mt-40 opacity-20"></div>
+            <div className="relative space-y-10">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-indigo-400">
+                  <BarChart3 className="h-5 w-5" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.6em] font-mono">Market Intel</span>
+                </div>
+                <h4 className="text-3xl font-black font-display tracking-tight leading-none">Growth Pulse 💡</h4>
+              </div>
+              
+              <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 space-y-6 relative overflow-hidden group/card shadow-inner">
+                <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500 opacity-50"></div>
+                <p className="text-slate-300 text-lg font-medium leading-[1.6] italic font-serif">
+                  "{getGrowthSuggestion()}"
+                </p>
+                <div className="h-px w-full bg-white/10"></div>
+                <div className="flex items-center justify-between">
+                  <div className="flex -space-x-3">
+                    {[1,2,3,4].map(i => (
+                      <div key={i} className="h-8 w-8 rounded-full border-4 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-black glow-blue">AI</div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-indigo-500"></div>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Optimized Real-time</span>
+                  </div>
+                </div>
+              </div>
+
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => onTabChange?.('Competitor Analysis')}
+                className="w-full py-5 rounded-[2rem] bg-indigo-600 text-white text-[11px] font-black uppercase tracking-[0.3em] hover:bg-indigo-500 transition-all shadow-[0_10px_40px_-10px_rgba(79,70,229,0.4)]"
+              >
+                Launch Intelligence
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Activity Feed */}
+          <div className="glass-card rounded-[3.5rem] p-10 lg:p-14 border border-white/5 space-y-10 h-fit">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-[1.25rem] bg-white/5 flex items-center justify-center border border-white/10">
+                  <History className="h-6 w-6 text-slate-400" />
+                </div>
+                <h3 className="text-2xl font-black text-white font-display">Timeline</h3>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Live Feed</span>
+              </div>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-3">
               {recentActivities.map((item, i) => (
-                <div key={i} className="flex items-center justify-between group cursor-pointer">
-                  <div className="flex items-center gap-4">
-                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${item.type === 'Listing' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-                      {item.type === 'Listing' ? <FileText className="h-5 w-5" /> : <Camera className="h-5 w-5" />}
+                <div key={i} className="group relative pl-10 pb-10 last:pb-0">
+                  {/* Vertical Timeline Line */}
+                  {i !== recentActivities.length - 1 && (
+                    <div className="absolute left-[9px] top-8 bottom-0 w-[1px] bg-white/5"></div>
+                  )}
+                  {/* Timeline Dot */}
+                  <div className={`absolute left-0 top-1.5 h-5 w-5 rounded-full border-[6px] border-slate-950 shadow-2xl z-10 transition-transform group-hover:scale-125 ${
+                    item.type === 'Listing' ? 'bg-blue-500 shadow-blue-500/20' : 'bg-indigo-500 shadow-indigo-500/20'
+                  }`}></div>
+                  
+                  <div className="space-y-2 p-5 rounded-3xl bg-white/0 group-hover:bg-white/5 transition-all border border-transparent group-hover:border-white/5">
+                    <div className="flex justify-between items-start">
+                      <p className="text-[15px] font-black text-white tracking-tight">{item.title}</p>
+                      <span className="text-[11px] font-mono text-slate-500">{item.time}</span>
                     </div>
-                    <div>
-                      <p className="text-xs font-black text-slate-900 group-hover:text-blue-600 transition-colors">{item.title}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.time}</p>
+                    <div className="flex items-center gap-3">
+                      <div className="px-3 py-1 rounded-lg bg-white/5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                        {item.type}
+                      </div>
+                      <div className="h-1 w-1 rounded-full bg-slate-700"></div>
+                      <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">{item.status}</span>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-lg">
-                      {item.status}
-                    </span>
                   </div>
                 </div>
               ))}
               {recentActivities.length === 0 && (
-                <p className="text-xs font-medium text-slate-400 text-center py-4">No recent activity found.</p>
+                <div className="text-center py-10 space-y-3">
+                  <div className="h-20 w-20 rounded-full bg-white/5 flex items-center justify-center mx-auto border border-white/10">
+                    <Sparkles className="h-10 w-10 text-slate-700" />
+                  </div>
+                  <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em] italic font-serif">No signal yet</p>
+                </div>
               )}
             </div>
             
-            <button className="w-full py-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">
-              View History
+            <button className="w-full py-5 rounded-3xl bg-white/5 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white/10 hover:text-white transition-all border border-white/5">
+              Archive History
             </button>
           </div>
 
-          <div className="bg-orange-50 rounded-[2.5rem] p-8 border border-orange-100 space-y-6">
-            <div className="flex items-center gap-3 text-orange-600">
-              <AlertCircle className="h-5 w-5" />
-              <h3 className="text-lg font-black font-display">Optimization Alerts</h3>
+          {/* Sync Status Bento */}
+          <div className="p-10 rounded-[3.5rem] bg-indigo-950/30 border border-indigo-500/10 space-y-8 group cursor-pointer hover:bg-indigo-950/40 transition-colors relative overflow-hidden backdrop-blur-md">
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
+            <div className="flex items-center justify-between relative z-10">
+              <div className="flex items-center gap-4 text-indigo-400">
+                <RefreshCw className="h-6 w-6 animate-spin-slow" />
+                <h4 className="text-xl font-black font-display tracking-tight">Active Sync</h4>
+              </div>
+              <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-black">STABLE</div>
             </div>
-            <p className="text-xs font-medium text-orange-800 leading-relaxed">
-              {usage.listingsGenerated < 5 
-                ? "Aapne abhi tak 5 listings optimize nahi ki hain. Shuru karein aur sales badhayein!"
-                : "Aapki listings ka SEO score behtar ho sakta hai. Inhe optimize karke aap search visibility 3x badha sakte hain."}
-            </p>
-            <button 
-              onClick={() => onTabChange?.('Listing Generator')}
-              className="w-full py-4 rounded-2xl bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all shadow-xl shadow-orange-600/20"
-            >
-              {usage.listingsGenerated < 5 ? "Start Now" : "Fix Now"}
-            </button>
-          </div>
-
-          <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 rounded-full blur-2xl -mr-16 -mt-16 opacity-30"></div>
-            <div className="relative space-y-4">
-              <h4 className="text-lg font-black font-display">Need Help? 💬</h4>
-              <p className="text-slate-400 text-xs font-medium leading-relaxed">
-                Hamare experts se baat karein aur apne Meesho business ko scale karein.
-              </p>
-              <a 
-                href={`https://wa.me/919023654443?text=${encodeURIComponent(`Hi, I need help with ListingAI.\n\nSeller ID: ${user.sellerId || user.uid?.substring(0, 8)}\nEmail: ${user.email}`)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2 text-blue-400 text-[10px] font-black uppercase tracking-widest hover:text-blue-300 transition-colors"
-              >
-                Contact Support <ArrowUpRight className="h-4 w-4" />
-              </a>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-black text-slate-900 font-display">Marketplace Sync</h3>
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            </div>
-            <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-4 relative z-10">
               {[
-                { name: 'Meesho', status: 'Connected', icon: 'M' },
-                { name: 'Amazon', status: 'Pending', icon: 'A' },
-                { name: 'Flipkart', status: 'Not Linked', icon: 'F' }
+                { name: 'M', active: true, label: 'Meesho' },
+                { name: 'A', active: false, label: 'Amazon' },
+                { name: 'F', active: false, label: 'Flipkart' },
               ].map((m, i) => (
-                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center font-black text-slate-900 text-xs shadow-sm">
-                      {m.icon}
-                    </div>
-                    <span className="text-xs font-black text-slate-900">{m.name}</span>
-                  </div>
-                  <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${
-                    m.status === 'Connected' ? 'bg-emerald-100 text-emerald-600' : 
-                    m.status === 'Pending' ? 'bg-orange-100 text-orange-600' : 'bg-slate-200 text-slate-500'
+                <div key={i} className="space-y-2">
+                  <div className={`h-16 rounded-[1.5rem] border flex items-center justify-center font-black text-lg shadow-inner transition-all ${
+                    m.active ? 'bg-indigo-600 border-indigo-400 text-white glow-blue' : 'bg-white/5 border-white/5 text-slate-700 opacity-40'
                   }`}>
-                    {m.status}
-                  </span>
+                    {m.name}
+                  </div>
+                  <p className="text-[8px] font-black text-center text-slate-600 uppercase tracking-widest">{m.label}</p>
                 </div>
               ))}
             </div>
-            <button className="w-full py-4 rounded-2xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10">
-              Manage Integrations
-            </button>
+            <p className="text-[10px] font-bold text-indigo-400 text-center uppercase tracking-[0.2em] italic font-serif opacity-90 relative z-10">
+              Synced with Meesho API
+            </p>
           </div>
         </div>
       </div>

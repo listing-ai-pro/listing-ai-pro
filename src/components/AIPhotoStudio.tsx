@@ -13,6 +13,7 @@ import {
 import { compressImage } from '../lib/utils';
 import { isPlanActive } from '../lib/subscription';
 import { trackCustom } from '../lib/pixel';
+import { SpaceLoader } from './SpaceLoader';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Camera, Loader2, UploadCloud, Image as ImageIcon, 
@@ -24,7 +25,7 @@ export default function AIPhotoStudio({ user }: { user: any }) {
   const { usage } = useUsage(user);
   const isActive = isPlanActive(user);
   const [mode, setMode] = useState<'APPAREL' | 'PRODUCT' | 'MOCKUP'>('PRODUCT');
-  const [activeTab, setActiveTab] = useState<'Model' | 'Apparel'>('Apparel');
+  const [activeTab, setActiveTab] = useState<'Model' | 'Apparel' | 'Design' | 'Product'>('Apparel');
   const [step, setStep] = useState(0); // 0: Idle, 1: Analysis, 2: Settings, 3: Background, 4: Render
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -217,6 +218,16 @@ export default function AIPhotoStudio({ user }: { user: any }) {
       setActiveTab('Apparel');
     } else {
       setActiveTab('Apparel');
+    }
+  };
+
+  const getLoadingStepText = () => {
+    switch (step) {
+      case 1: return 'Analyzing Visual Assets...';
+      case 2: return 'Configuring Studio Parameters...';
+      case 3: return 'Synthesizing Neural Background...';
+      case 4: return 'Rendering Final Masterpiece...';
+      default: return 'AI Photoshoot in Progress...';
     }
   };
 
@@ -438,7 +449,9 @@ export default function AIPhotoStudio({ user }: { user: any }) {
         <div className="lg:col-span-6 flex flex-col">
           <div className="bg-[#020617] rounded-[3.5rem] border border-slate-800 flex-1 flex flex-col items-center justify-center relative overflow-hidden shadow-2xl group">
             <AnimatePresence mode="wait">
-              {resultImage ? (
+              {loading ? (
+                <SpaceLoader key="loader" step={getLoadingStepText()} isInline={true} />
+              ) : resultImage ? (
                 <motion.div
                   key="result"
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -448,7 +461,7 @@ export default function AIPhotoStudio({ user }: { user: any }) {
                   <img src={resultImage} alt="Studio Result" className="max-w-full max-h-full object-contain" referrerPolicy="no-referrer" />
                 </motion.div>
               ) : (
-                <div className="text-center">
+                <div key="placeholder" className="text-center">
                   <ImageIcon className="h-10 w-10 text-slate-700 mx-auto mb-4" />
                   <h3 className="text-2xl font-black text-slate-700 uppercase tracking-[0.2em] font-display">Awaiting Production</h3>
                 </div>

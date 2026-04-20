@@ -1,15 +1,49 @@
-import { ai } from './gemini';
+import { ai, generateGeminiContent as baseGenerateGemini } from './gemini';
+import { HUMANIZER_PROMPT } from './humanizer';
+import { SEOMACHINE_PROMPT } from './seoMachine';
+import { logAiRequest } from './ai-logger';
 
 // Helper for exponential backoff
-async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
+async function withRetry<T>(
+  fn: () => Promise<T>, 
+  context: { type: string, model: string },
+  retries = 3, 
+  delay = 1000
+): Promise<T> {
+  const startTime = Date.now();
   try {
-    return await fn();
+    const result = await fn();
+    const latency = Date.now() - startTime;
+    logAiRequest(context.type, context.model, 'success', undefined, latency);
+    return result;
   } catch (error: any) {
-    if (retries > 0 && error.status === 429) {
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return withRetry(fn, retries - 1, delay * 2);
+    const message = error.message || '';
+    const status = error.status || 0;
+    const latency = Date.now() - startTime;
+
+    logAiRequest(context.type, context.model, 'error', message, latency);
+
+    // Handle Quota/Rate Limit
+    if (status === 429 || message.includes('quota')) {
+      if (retries > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return withRetry(fn, context, retries - 1, delay * 2);
+      }
+      throw new Error('Wait for 2 mins - High Traffic on Website | सर्वर पर ट्रैफिक अधिक है, कृपया 2 मिनट बाद फिर से कोशिश करें।');
     }
-    throw error;
+
+    // Handle Safety
+    if (message.includes('safety') || message.includes('candidate')) {
+      throw new Error('AI Safety Policy: यह प्रॉम्प्ट या इमेज AI पॉलिसी के खिलाफ हो सकती है। कृपया कुछ और ट्राई करें।');
+    }
+
+    // Handle other errors
+    if (retries > 0) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return withRetry(fn, context, retries - 1, delay * 2);
+    }
+    
+    throw new Error('AI Processing Error: AI रेस्पोंस जेनरेट नहीं कर पाया। कृपया इंटरनेट चेक करें या थोड़ी देर बाद कोशिश करें।');
   }
 }
 
@@ -26,7 +60,7 @@ export async function analyzeProductImage(imageB64: string) {
       }]
     });
     return response.text;
-  });
+  }, { type: 'image_analysis', model: 'gemini-2.5-flash-image' });
 }
 
 export async function suggestPhotoshootSettings(imageB64: string, mode: string) {
@@ -45,7 +79,7 @@ export async function suggestPhotoshootSettings(imageB64: string, mode: string) 
     // Clean up potential markdown formatting
     const jsonString = text.replace(/```json\n?|\n?```/g, '').trim();
     return JSON.parse(jsonString);
-  });
+  }, { type: 'photoshoot_settings', model: 'gemini-2.5-flash-image' });
 }
 
 export async function generateBackgroundImage(prompt: string) {
@@ -56,7 +90,7 @@ export async function generateBackgroundImage(prompt: string) {
     });
     // Assuming the response contains an image
     return response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData;
-  });
+  }, { type: 'background_gen', model: 'gemini-2.5-flash-image' });
 }
 
 export async function generateProductStudioImage(options: any) {
@@ -83,7 +117,7 @@ export async function generateProductStudioImage(options: any) {
     });
     const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData;
     return part;
-  });
+  }, { type: 'studio_gen', model: 'gemini-2.5-flash-image' });
 }
 
 export async function generateVirtualTryOn(options: any) {
@@ -113,7 +147,7 @@ export async function generateVirtualTryOn(options: any) {
     });
     const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData;
     return part;
-  });
+  }, { type: 'try_on_gen', model: 'gemini-2.5-flash-image' });
 }
 
 export async function generateMockupImage(options: any) {
@@ -139,19 +173,22 @@ export async function generateMockupImage(options: any) {
     });
     const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData;
     return part;
-  });
+  }, { type: 'mockup_gen', model: 'gemini-2.5-flash-image' });
 }
 
-export async function generateGeminiContent(options: { prompt: string, history?: any[], systemInstruction?: string }) {
+export async function generateGeminiContent(options: { prompt: string, history?: any[], systemInstruction?: string, useSearch?: boolean }) {
   return withRetry(async () => {
-    const { prompt, history, systemInstruction } = options;
-    const response = await ai.models.generateContent({
-      model: 'gemini-flash-latest',
-      contents: history ? [...history, { role: 'user', parts: [{ text: prompt }] }] : [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        systemInstruction: systemInstruction
-      }
+    const { prompt, history, systemInstruction, useSearch } = options;
+    const finalSystemInstruction = systemInstruction 
+      ? `${systemInstruction}\n\n${HUMANIZER_PROMPT}\n\n${SEOMACHINE_PROMPT}`
+      : `${HUMANIZER_PROMPT}\n\n${SEOMACHINE_PROMPT}`;
+
+    const response = await baseGenerateGemini({ 
+      prompt, 
+      contents: history,
+      systemInstruction: finalSystemInstruction as any,
+      useSearch
     });
     return response;
-  });
+  }, { type: 'text_gen', model: 'gemini-flash-latest' });
 }

@@ -42,15 +42,16 @@ service cloud.firestore {
     }
 
     function isValidDailyStats(data) {
-      return data.keys().hasAll(['userId', 'date', 'listingsGenerated', 'whiteBackgrounds', 'marketAnalysis', 'aplusGenerated', 'photoshoots', 'shippingOptimizations']) &&
+      // Use hasAll only for mandatory core fields to allow smooth schema transitions
+      return data.keys().hasAll(['userId', 'date']) &&
              data.userId is string && data.userId.size() < 128 &&
              data.date is string && data.date.matches("^\\d{4}-\\d{2}-\\d{2}$") &&
-             data.listingsGenerated is number && data.listingsGenerated >= 0 && data.listingsGenerated <= 20 &&
-             data.whiteBackgrounds is number && data.whiteBackgrounds >= 0 && data.whiteBackgrounds <= 5 &&
-             data.marketAnalysis is number && data.marketAnalysis >= 0 && data.marketAnalysis <= 10 &&
-             data.aplusGenerated is number && data.aplusGenerated >= 0 && data.aplusGenerated <= 5 &&
-             data.photoshoots is number && data.photoshoots >= 0 && data.photoshoots <= 4 &&
-             data.shippingOptimizations is number && data.shippingOptimizations >= 0 && data.shippingOptimizations <= 5;
+             (!('listingsGenerated' in data) || (data.listingsGenerated is number && data.listingsGenerated >= 0 && data.listingsGenerated <= 100)) &&
+             (!('marketAnalysis' in data) || (data.marketAnalysis is number && data.marketAnalysis >= 0 && data.marketAnalysis <= 50)) &&
+             (!('aplusGenerated' in data) || (data.aplusGenerated is number && data.aplusGenerated >= 0 && data.aplusGenerated <= 50)) &&
+             (!('photoshoots' in data) || (data.photoshoots is number && data.photoshoots >= 0 && data.photoshoots <= 50)) &&
+             (!('shippingOptimizations' in data) || (data.shippingOptimizations is number && data.shippingOptimizations >= 0 && data.shippingOptimizations <= 50)) &&
+             (!('bulkGenerated' in data) || (data.bulkGenerated is number && data.bulkGenerated >= 0 && data.bulkGenerated <= 25));
     }
 
     function isValidAdminMsg(data) {
@@ -59,6 +60,17 @@ service cloud.firestore {
              data.target in ['ALL', 'PRO', 'TRIAL'] &&
              data.active is bool &&
              data.createdAt is timestamp;
+    }
+
+    function isValidAiLog(data) {
+      return data.keys().hasAll(['userId', 'type', 'model', 'status', 'timestamp']) &&
+             data.userId is string &&
+             data.type is string && data.type.size() < 128 &&
+             data.model is string && data.model.size() < 128 &&
+             data.status in ['success', 'error'] &&
+             data.timestamp is timestamp &&
+             (!('errorMessage' in data) || (data.errorMessage is string || data.errorMessage == null)) &&
+             (!('latency' in data) || (data.latency is number || data.latency == null));
     }
 
     // ===============================================================
@@ -83,6 +95,11 @@ service cloud.firestore {
     match /AdminMsg/{msgId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin() && isValidAdminMsg(request.resource.data);
+    }
+
+    match /ai_logs/{logId} {
+      allow create: if isAuthenticated() && isValidAiLog(request.resource.data);
+      allow read: if isAdmin();
     }
 
     // Allow admins to query all daily_stats for analytics

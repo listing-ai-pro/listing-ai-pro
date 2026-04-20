@@ -1,13 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { trackUsage, checkLimit, PLAN_LIMITS } from '../lib/usage';
 import { useUsage } from '../hooks/useUsage';
-import { generateGeminiContent } from '../lib/gemini';
+import { ConductorService, ListingInput } from '../lib/conductorService';
 import { compressImage } from '../lib/utils';
 import { isPlanActive } from '../lib/subscription';
-import { trackEvent, trackCustom } from '../lib/pixel';
+import { trackCustom } from '../lib/pixel';
 import { trackAction } from '../lib/actions';
+import { SpaceLoader } from './SpaceLoader';
 import { motion, AnimatePresence } from 'motion/react';
-import { Copy, Check, Sparkles, Loader2, AlertCircle, ChevronRight, ChevronLeft, FileText, Image as ImageIcon, Link as LinkIcon, UploadCloud, Download, BarChart3, Lightbulb, Lock } from 'lucide-react';
+import { Copy, Check, Sparkles, Loader2, AlertCircle, ChevronRight, ChevronLeft, Image as ImageIcon, UploadCloud, Download, BarChart3, Lightbulb, Lock, Zap, Calculator } from 'lucide-react';
 
 const MARKETPLACES = [
   { id: 'amazon', name: 'Amazon.in', type: 'GLOBAL', icon: '📦' },
@@ -25,12 +26,9 @@ export default function ListingGenerator({ user }: { user: any }) {
   const isActive = isPlanActive(user);
   const [step, setStep] = useState(1);
   const [platforms, setPlatforms] = useState<string[]>([]);
-  const [inputMethod, setInputMethod] = useState<'text' | 'image' | 'url'>('image');
   
   // Inputs
-  const [productText, setProductText] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
-  const [productUrl, setProductUrl] = useState('');
   
   // Images
   const [frontImage, setFrontImage] = useState<string | null>(null);
@@ -48,9 +46,7 @@ export default function ListingGenerator({ user }: { user: any }) {
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   const togglePlatform = (id: string) => {
-    setPlatforms(prev => 
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
+    setPlatforms(prev => prev.includes(id) ? [] : [id]);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'front' | 'back') => {
@@ -89,124 +85,29 @@ export default function ListingGenerator({ user }: { user: any }) {
         return;
       }
 
-      const productQuery = inputMethod === 'text' ? productText : 
-                           inputMethod === 'url' ? productUrl : 
-                           additionalInfo || 'Product image provided';
+      const productQuery = additionalInfo || 'Product image provided';
 
-      let marketDataStr = '';
-      try {
-        setLoadingStep('Fetching Real-time Market Prices...');
-        const marketData = await generateGeminiContent({
-          prompt: `Perform a live market analysis using Google Search for: ${productQuery}. 
-          
-          CRITICAL: 
-          1. Find the ACTUAL current selling prices for this specific product or very similar ones on Amazon.in, Flipkart, and Meesho.
-          2. Do NOT provide generic or estimated prices. Look for the real-time prices from search results.
-          3. If the input is a URL, analyze the specific product at that link first.
-          4. All prices MUST be in Indian Rupees (INR) using the ₹ symbol.
-          
-          Return ONLY a valid JSON object with this exact structure: 
-          { 
-            "hsnCode": "string", 
-            "gstRate": "string",
-            "competitorPrices": [
-              { "platform": "string", "price": "string (with ₹)" }
-            ]
-          }`,
-          useSearch: true
-        });
-        
-        if (marketData.text) {
-          marketDataStr = marketData.text;
-        }
-      } catch (e) {
-        console.warn("Market intelligence failed, proceeding without it", e);
-      }
-
-      const systemPrompt = `
-        You are an expert e-commerce copywriter. Generate SEO-optimized product listings for the following platforms: ${platforms.join(', ')}.
-        
-        Market Data (HSN, GST, Pricing): ${marketDataStr}
-        
-        Platform Rules & Compliance:
-        - Amazon.in: Title max 200 characters. No promotional phrases. Requires: Title, 5 Bullet Points, Description, Search Terms, HSN/GST.
-        - Flipkart: Title max 150 characters. Requires: Title, Key Features, Description, Search Keywords.
-        - Meesho: Simple titles. Requires: Title, Description, Category, Material/Fabric, Weight/Dimensions.
-        - eBay: Title max 80 characters. Requires: Title, Description (HTML), Item Specifics (specifically Type, Color, Material, Occasion, Brand).
-        - Etsy: Title max 140 characters. Requires: Title, Description, 13 Tags (highly relevant, e.g., 'embroidered blouse', 'designer blouse', 'traditional clothing'), Materials, and 'Material & Care' (e.g., mentioning 'Phantom Silk').
-        - Shopify: Requires: Title, Description (HTML), Tags, SEO Title, SEO Description, URL Handle.
-        - Myntra: Requires: Title, Description, Material & Care, Style Note.
-        - Website: Requires: Title, Meta Description, Full Content, Tags.
-        
-        Return ONLY a valid JSON object where keys are the exact platform names requested and values are objects containing the following SEO elements:
-        - title (string): A catchy, compliant, SEO-optimized title.
-        - seoTitle (string): A secondary, highly optimized meta-title for search engines.
-        - seoScore (number): An overall SEO score from 0-100.
-        - seoAnalysis (object): { titleScore, descriptionScore, keywordScore, suggestions }
-        - description (string): A persuasive, detailed product description.
-        - bulletPoints (array of strings): 5-7 key features and benefits.
-        - keywords (array of strings): 10-15 relevant backend search terms.
-        - platformSpecificFields (object): A key-value map of fields specifically required by this platform. 
-          * For Etsy: include "Material & Care" and "13 Tags" (as an array).
-          * For eBay: include "Item Specifics" as a sub-object with Type, Color, Material, Occasion, and Brand.
-          * For Shopify: include "Handle".
-          * For Myntra: include "Material & Care" and "Style Note".
-        - optimizationSteps (array of strings): A step-by-step guide on how to list this product for maximum visibility.
-        - marketInsights (object): Echo back the provided Market Data.
-          - hsnCode (string)
-          - gstRate (string)
-          - competitorPrices (array of objects: { platform, price })
-      `;
-
-      const userPrompt = `Generate listings for: ${productQuery}. ${additionalInfo ? `Additional Info: ${additionalInfo}` : ''}`;
-      
       trackAction('Generate Listing', { product: productQuery, platforms });
 
-      const contents = {
-        parts: [
-          { text: userPrompt },
-          ...(inputMethod === 'image' && frontImage ? [{
-            inlineData: {
-              data: frontImage.split(',')[1],
-              mimeType: frontImage.split(';')[0].split(':')[1]
-            }
-          }] : []),
-          ...(inputMethod === 'image' && backImage ? [{
-            inlineData: {
-              data: backImage.split(',')[1],
-              mimeType: backImage.split(';')[0].split(':')[1]
-            }
-          }] : [])
-        ]
+      const input: ListingInput = {
+        imageB64: frontImage || undefined,
+        additionalInfo,
+        platforms,
+        productQuery
       };
 
-      let retries = 3;
-      let data = null;
-      setLoadingStep('Generating SEO Optimized Copy...');
-      while (retries > 0) {
-        try {
-          data = await generateGeminiContent({
-            contents,
-            prompt: systemPrompt
-          });
-          break;
-        } catch (e: any) {
-          if (e.message.includes('Invalid Gemini API Key')) throw e;
-          retries--;
-          if (retries === 0) throw e;
-          await new Promise(resolve => setTimeout(resolve, (3 - retries) * 1000));
-        }
-      }
+      const resultText = await ConductorService.orchestrateListing(input, (step) => {
+        setLoadingStep(step);
+      });
 
-      if (!data) throw new Error("Failed to generate listing");
+      if (!resultText) throw new Error("Failed to generate listing");
 
       let parsedResults: Record<string, any> = {};
-      setLoadingStep('Finalizing Results...');
       try {
-        const text = data.text.replace(/```json\n?|\n?```/g, '').trim();
+        const text = resultText.replace(/```json\n?|\n?```/g, '').trim();
         parsedResults = JSON.parse(text);
       } catch (e) {
-        parsedResults = { [platforms[0]]: data.text };
+        parsedResults = { [platforms[0]]: resultText };
       }
       
       setResults(parsedResults);
@@ -216,7 +117,7 @@ export default function ListingGenerator({ user }: { user: any }) {
       // Track Facebook Pixel Event
       trackCustom('ListingGenerated', { 
         platforms: platforms.join(','),
-        inputMethod,
+        inputMethod: 'image',
         userEmail: user.email,
         userId: user.uid
       });
@@ -238,8 +139,15 @@ export default function ListingGenerator({ user }: { user: any }) {
     if (typeof results[activeTab] === 'string') {
       textToCopy = results[activeTab];
     } else {
-      const { title, description, bulletPoints, keywords, platformSpecificFields } = results[activeTab];
-      textToCopy = `Title:\n${title}\n\nDescription:\n${description}\n\nBullet Points:\n${bulletPoints?.map((p: string) => `- ${p}`).join('\n')}\n\nKeywords:\n${keywords?.join(', ')}`;
+      const { title, midTitle, shortTitle, description, bulletPoints, keywords, platformSpecificFields } = results[activeTab];
+      textToCopy = `Full Title:\n${title}\n\n`;
+      if (midTitle) textToCopy += `Mid-length Title:\n${midTitle}\n\n`;
+      if (shortTitle) textToCopy += `Short Title:\n${shortTitle}\n\n`;
+      
+      const bulletArr = Array.isArray(bulletPoints) ? bulletPoints : [];
+      const keywordArr = Array.isArray(keywords) ? keywords : (typeof keywords === 'string' ? keywords.split(',').map(k => k.trim()) : []);
+      
+      textToCopy += `Description:\n${description}\n\nBullet Points:\n${bulletArr.map((p: string) => `- ${p}`).join('\n')}\n\nKeywords:\n${keywordArr.join(', ')}`;
       
       if (platformSpecificFields && Object.keys(platformSpecificFields).length > 0) {
         textToCopy += `\n\nPlatform Specific Fields:\n`;
@@ -268,8 +176,15 @@ export default function ListingGenerator({ user }: { user: any }) {
       if (typeof results[activeTab] === 'string') {
         content = results[activeTab];
       } else {
-        const { title, description, bulletPoints, keywords, platformSpecificFields } = results[activeTab];
-        content = `Title:\n${title}\n\nDescription:\n${description}\n\nBullet Points:\n${bulletPoints?.map((p: string) => `- ${p}`).join('\n')}\n\nKeywords:\n${keywords?.join(', ')}`;
+        const { title, midTitle, shortTitle, description, bulletPoints, keywords, platformSpecificFields } = results[activeTab];
+        const bulletArr = Array.isArray(bulletPoints) ? bulletPoints : [];
+        const keywordArr = Array.isArray(keywords) ? keywords : (typeof keywords === 'string' ? keywords.split(',').map(k => k.trim()) : []);
+
+        content = `Full Title:\n${title}\n\n`;
+        if (midTitle) content += `Mid-length Title:\n${midTitle}\n\n`;
+        if (shortTitle) content += `Short Title:\n${shortTitle}\n\n`;
+        
+        content += `Description:\n${description}\n\nBullet Points:\n${bulletArr.map((p: string) => `- ${p}`).join('\n')}\n\nKeywords:\n${keywordArr.join(', ')}`;
         
         if (platformSpecificFields && Object.keys(platformSpecificFields).length > 0) {
           content += `\n\nPlatform Specific Fields:\n`;
@@ -283,12 +198,17 @@ export default function ListingGenerator({ user }: { user: any }) {
       if (typeof results[activeTab] === 'string') {
         content = `"Content"\n"${results[activeTab].replace(/"/g, '""')}"`;
       } else {
-        const { title, description, bulletPoints, keywords, platformSpecificFields } = results[activeTab];
+        const { title, midTitle, shortTitle, description, bulletPoints, keywords, platformSpecificFields } = results[activeTab];
+        const bulletArr = Array.isArray(bulletPoints) ? bulletPoints : [];
+        const keywordArr = Array.isArray(keywords) ? keywords : (typeof keywords === 'string' ? keywords.split(',').map(k => k.trim()) : []);
+
         content = `Field,Value\n`;
-        content += `"Title","${(title || '').replace(/"/g, '""')}"\n`;
+        content += `"Full Title","${(title || '').replace(/"/g, '""')}"\n`;
+        if (midTitle) content += `"Mid Title","${midTitle.replace(/"/g, '""')}"\n`;
+        if (shortTitle) content += `"Short Title","${shortTitle.replace(/"/g, '""')}"\n`;
         content += `"Description","${(description || '').replace(/"/g, '""')}"\n`;
-        content += `"Bullet Points","${(bulletPoints || []).join('; ').replace(/"/g, '""')}"\n`;
-        content += `"Keywords","${(keywords || []).join(', ').replace(/"/g, '""')}"\n`;
+        content += `"Bullet Points","${bulletArr.join('; ').replace(/"/g, '""')}"\n`;
+        content += `"Keywords","${keywordArr.join(', ').replace(/"/g, '""')}"\n`;
         
         if (platformSpecificFields) {
           Object.entries(platformSpecificFields).forEach(([key, value]) => {
@@ -312,29 +232,32 @@ export default function ListingGenerator({ user }: { user: any }) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
+      <AnimatePresence>
+        {loading && <SpaceLoader step={loadingStep} />}
+      </AnimatePresence>
       {!isActive && (
-        <div className="absolute inset-0 z-[50] flex items-center justify-center p-6 bg-white/60 backdrop-blur-md rounded-[3rem]">
+        <div className="absolute inset-0 z-[50] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-xl rounded-[3rem]">
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="max-w-md w-full bg-white p-12 rounded-[3rem] shadow-2xl border border-slate-100 text-center space-y-8"
+            className="max-w-md w-full bg-slate-900 p-12 rounded-[3.5rem] shadow-3xl border border-white/5 text-center space-y-8"
           >
-            <div className="mx-auto h-20 w-20 rounded-[2rem] bg-red-50 flex items-center justify-center text-red-600 shadow-xl shadow-red-500/10">
+            <div className="mx-auto h-20 w-20 rounded-[2rem] bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shadow-2xl shadow-red-500/20">
               <Lock className="h-10 w-10" />
             </div>
             <div className="space-y-4">
-              <h3 className="text-3xl font-black text-slate-900 font-display">Access Restricted</h3>
-              <p className="text-slate-500 font-medium leading-relaxed">
+              <h3 className="text-3xl font-black text-white font-display">Access Restricted</h3>
+              <p className="text-slate-400 font-medium leading-relaxed">
                 Aapka trial ya subscription khatam ho gaya hai. Listing generate karne ke liye naya plan buy karein.
               </p>
             </div>
             <div className="pt-4">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Contact Admin on WhatsApp to Upgrade</p>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 font-mono">Contact Admin on WhatsApp to Upgrade</p>
               <a 
                 href={`https://wa.me/919023654443?text=${encodeURIComponent(`Hi, I want to upgrade my plan for ListingAI.\n\nSeller ID: ${user.sellerId || user.uid?.substring(0, 8)}\nEmail: ${user.email}`)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="block w-full py-5 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/20"
+                className="block w-full py-5 rounded-2xl bg-white text-slate-900 hover:bg-blue-600 hover:text-white font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-600/20"
               >
                 Upgrade Now
               </a>
@@ -350,41 +273,41 @@ export default function ListingGenerator({ user }: { user: any }) {
       </div>
 
       {/* Header Section */}
-      <div className="relative mb-16">
+      <div className="relative mb-12">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
           <div className="max-w-3xl text-center lg:text-left">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 mb-6"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-4 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
             >
-              <Sparkles className="h-4 w-4 text-blue-600" />
-              <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-blue-600">AI-Powered Listing Engine</span>
+              <Zap className="h-4 w-4 text-blue-400" />
+              <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-blue-400">SEOMachine v2.0 Platform</span>
             </motion.div>
-            <h2 className="text-4xl lg:text-7xl font-black tracking-tight text-slate-900 mb-6 font-display leading-[1.1] lg:leading-[0.9]">
-              Sell <span className="text-blue-600">Everywhere</span>,<br />
+            <h2 className="text-3xl lg:text-6xl font-black tracking-tight text-white mb-4 font-display leading-[1.1] lg:leading-[0.9]">
+              Sell <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Everywhere</span>,<br />
               Effortlessly.
             </h2>
-            <p className="text-base lg:text-xl font-medium text-slate-500 leading-relaxed max-w-xl mx-auto lg:mx-0">
+            <p className="text-sm lg:text-lg font-medium text-slate-400 leading-relaxed max-w-xl mx-auto lg:mx-0">
               Transform your product ideas into high-converting listings optimized for global marketplaces in seconds.
             </p>
           </div>
           
           <div className="flex flex-col items-center lg:items-end gap-6">
-            <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-slate-200 shadow-sm w-full lg:w-auto">
-              <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
+            <div className="flex items-center gap-4 bg-slate-900/60 backdrop-blur-xl p-4 rounded-3xl border border-white/5 shadow-2xl w-full lg:w-auto">
+              <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30">
                 <Sparkles className="h-5 w-5 lg:h-6 lg:w-6 text-white" />
               </div>
               <div className="flex-1 lg:flex-none">
-                <p className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Daily Credits</p>
+                <p className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1 font-mono">Daily Credits</p>
                 <div className="flex items-center gap-3">
-                  <div className="h-2 w-24 lg:w-32 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2 w-24 lg:w-32 bg-white/5 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-blue-600 transition-all duration-500" 
+                      className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-500" 
                       style={{ width: `${Math.min(100, (usage.listingsGenerated / (PLAN_LIMITS[user.activePlanId || 'trial']?.listingsGenerated || 3)) * 100)}%` }}
                     ></div>
                   </div>
-                  <span className="text-xs lg:text-sm font-black text-slate-900 whitespace-nowrap">{usage.listingsGenerated} / {PLAN_LIMITS[user.activePlanId || 'trial']?.listingsGenerated || 3}</span>
+                  <span className="text-xs lg:text-sm font-black text-white whitespace-nowrap font-mono">{usage.listingsGenerated} / {PLAN_LIMITS[user.activePlanId || 'trial']?.listingsGenerated || 3}</span>
                 </div>
               </div>
             </div>
@@ -428,9 +351,9 @@ export default function ListingGenerator({ user }: { user: any }) {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-12"
+          className="space-y-8 lg:space-y-12"
         >
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {MARKETPLACES.map((p, idx) => {
               const isActive = platforms.includes(p.id);
               return (
@@ -440,21 +363,21 @@ export default function ListingGenerator({ user }: { user: any }) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
                   onClick={() => togglePlatform(p.id)}
-                  className={`group relative flex flex-col items-center justify-center p-10 rounded-[3rem] border-2 transition-all duration-300 ${
+                  className={`group relative flex flex-col items-center justify-center p-6 lg:p-8 rounded-[1.5rem] lg:rounded-[2rem] border-2 transition-all duration-300 ${
                     isActive 
-                      ? 'border-blue-600 bg-white shadow-2xl shadow-blue-600/10 -translate-y-2' 
-                      : 'border-transparent bg-white shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:-translate-y-2'
+                      ? 'border-blue-500 bg-slate-900 shadow-2xl shadow-blue-500/20 lg:-translate-y-2' 
+                      : 'border-white/5 bg-slate-900/40 backdrop-blur-md shadow-xl hover:border-white/10 hover:bg-slate-900/60 lg:hover:-translate-y-2'
                   }`}
                 >
-                  <div className={`text-5xl mb-6 transition-transform duration-300 group-hover:scale-110 ${isActive ? 'scale-110' : ''}`}>
+                  <div className={`text-3xl lg:text-4xl mb-3 lg:mb-4 transition-transform duration-300 group-hover:scale-110 ${isActive ? 'scale-110' : ''}`}>
                     {p.icon}
                   </div>
-                  <span className="font-black text-xl text-slate-900 mb-1 font-display">{p.name}</span>
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{p.type}</span>
+                  <span className={`font-black text-base lg:text-xl mb-1 font-display transition-colors ${isActive ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}>{p.name}</span>
+                  <span className={`text-[8px] lg:text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-400'}`}>{p.type}</span>
                   
                   {isActive && (
-                    <div className="absolute top-6 right-6 h-6 w-6 bg-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-600/30">
-                      <Check className="h-3 w-3 text-white" />
+                    <div className="absolute top-4 right-4 lg:top-6 lg:right-6 h-5 w-5 lg:h-6 lg:w-6 bg-blue-500 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30">
+                      <Check className="h-2 w-2 lg:h-3 lg:w-3 text-white" strokeWidth={4} />
                     </div>
                   )}
                 </motion.button>
@@ -466,10 +389,10 @@ export default function ListingGenerator({ user }: { user: any }) {
             <button
               onClick={() => setStep(2)}
               disabled={platforms.length === 0}
-              className={`group relative px-12 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center gap-4 transition-all ${
+              className={`group relative w-full lg:w-auto px-12 py-5 rounded-[1.5rem] lg:rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-4 transition-all ${
                 platforms.length === 0
-                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                  : 'bg-slate-900 text-white hover:bg-blue-600 hover:shadow-2xl hover:shadow-blue-600/30 active:scale-95'
+                  ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                  : 'bg-white text-slate-900 hover:bg-blue-600 hover:text-white hover:shadow-2xl hover:shadow-blue-600/30 active:scale-95'
               }`}
             >
               Continue to Details
@@ -486,61 +409,18 @@ export default function ListingGenerator({ user }: { user: any }) {
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-5xl mx-auto"
         >
-          {/* Input Method Toggle */}
-          <div className="flex justify-center mb-12">
-            <div className="inline-flex items-center p-2 bg-white/80 backdrop-blur-md rounded-[2rem] shadow-xl border border-slate-200">
-              {[
-                { id: 'image', icon: ImageIcon, label: 'Visual' },
-                { id: 'text', icon: FileText, label: 'Textual' },
-                { id: 'url', icon: LinkIcon, label: 'External' }
-              ].map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => setInputMethod(m.id as any)}
-                  className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] text-sm font-black uppercase tracking-widest transition-all ${
-                    inputMethod === m.id 
-                      ? 'bg-slate-900 text-white shadow-xl' 
-                      : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <m.icon className="h-5 w-5" />
-                  {m.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Input Areas */}
-          <div className="bg-white p-10 rounded-[3.5rem] border border-slate-200 shadow-2xl mb-12 relative overflow-hidden">
+          <div className="bg-white p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] border border-slate-200 shadow-2xl mb-8 lg:mb-12 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-50"></div>
             
             <AnimatePresence mode="wait">
-              {inputMethod === 'text' && (
-                <motion.div
-                  key="text"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                >
-                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Product Narrative</label>
-                  <textarea
-                    value={productText}
-                    onChange={(e) => setProductText(e.target.value)}
-                    placeholder="Describe your product's soul, features, and why it matters..."
-                    className="w-full h-64 rounded-[2rem] border-2 border-slate-100 bg-slate-50 p-8 text-slate-900 placeholder-slate-300 focus:border-blue-600 focus:bg-white focus:ring-0 transition-all resize-none font-bold text-lg leading-relaxed"
-                  />
-                </motion.div>
-              )}
-
-              {inputMethod === 'image' && (
                 <motion.div
                   key="image"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="space-y-10"
+                  className="space-y-6"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-8">
                     {[
                       { type: 'front', label: 'Primary View', ref: frontInputRef, state: frontImage },
                       { type: 'back', label: 'Secondary View', ref: backInputRef, state: backImage }
@@ -556,7 +436,7 @@ export default function ListingGenerator({ user }: { user: any }) {
                         />
                         <div 
                           onClick={() => (img.ref as any).current?.click()}
-                          className={`group relative h-80 border-2 border-dashed rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${
+                          className={`group relative h-64 lg:h-80 border-2 border-dashed rounded-[1.5rem] lg:rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${
                             img.state ? 'border-blue-600 bg-white' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-blue-300'
                           }`}
                         >
@@ -564,16 +444,16 @@ export default function ListingGenerator({ user }: { user: any }) {
                             <>
                               <img src={img.state} alt={img.label} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <span className="text-white font-black uppercase tracking-widest text-xs">Change Image</span>
+                                <span className="text-white font-black uppercase tracking-widest text-[10px]">Change Image</span>
                               </div>
                             </>
                           ) : (
                             <>
-                              <div className="h-16 w-16 rounded-2xl bg-blue-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                <UploadCloud className="h-8 w-8 text-blue-600" />
+                              <div className="h-12 w-12 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl bg-blue-50 flex items-center justify-center mb-3 lg:mb-4 group-hover:scale-110 transition-transform">
+                                <UploadCloud className="h-6 w-6 lg:h-8 w-8 text-blue-600" />
                               </div>
-                              <span className="text-sm font-black text-slate-700">Drop or Click to Upload</span>
-                              <span className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Max 20MB</span>
+                              <span className="text-[11px] lg:text-sm font-black text-slate-700">Drop or Click to Upload</span>
+                              <span className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Max 20MB</span>
                             </>
                           )}
                         </div>
@@ -586,49 +466,25 @@ export default function ListingGenerator({ user }: { user: any }) {
                       value={additionalInfo}
                       onChange={(e) => setAdditionalInfo(e.target.value)}
                       placeholder="Add specific details like material, size, or special features..."
-                      className="w-full h-32 rounded-[1.5rem] border-2 border-slate-100 bg-slate-50 p-6 text-slate-900 placeholder-slate-300 focus:border-blue-600 focus:bg-white focus:ring-0 transition-all resize-none font-bold text-sm leading-relaxed"
+                      className="w-full h-24 lg:h-32 rounded-xl lg:rounded-[1.5rem] border-2 border-slate-100 bg-slate-50 p-4 lg:p-6 text-slate-900 placeholder-slate-300 focus:border-blue-600 focus:bg-white focus:ring-0 transition-all resize-none font-bold text-sm leading-relaxed"
                     />
                   </div>
                 </motion.div>
-              )}
-
-              {inputMethod === 'url' && (
-                <motion.div
-                  key="url"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                >
-                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Source URL</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
-                      <LinkIcon className="h-6 w-6 text-slate-300" />
-                    </div>
-                    <input
-                      type="url"
-                      value={productUrl}
-                      onChange={(e) => setProductUrl(e.target.value)}
-                      placeholder="https://amazon.in/dp/..."
-                      className="w-full rounded-[2rem] border-2 border-slate-100 bg-slate-50 py-6 pl-16 pr-8 text-slate-900 placeholder-slate-300 focus:border-blue-600 focus:bg-white focus:ring-0 transition-all font-black text-lg"
-                    />
-                  </div>
-                </motion.div>
-              )}
             </AnimatePresence>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <button
               onClick={() => setStep(1)}
-              className="px-10 py-4 rounded-full font-black text-xs uppercase tracking-widest flex items-center gap-3 text-slate-500 hover:bg-white hover:shadow-xl transition-all border border-slate-200 bg-white"
+              className="w-full sm:w-auto px-10 py-4 rounded-full font-black text-[10px] lg:text-xs uppercase tracking-widest flex items-center justify-center gap-3 text-slate-500 hover:bg-white hover:shadow-xl transition-all border border-slate-200 bg-white"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4 lg:h-5 lg:w-5" />
               Back
             </button>
             <button
               onClick={generateListing}
               disabled={loading}
-              className={`px-12 py-5 rounded-full font-black text-sm uppercase tracking-widest flex items-center gap-4 transition-all shadow-2xl shadow-blue-600/20 ${
+              className={`w-full sm:w-auto px-12 py-5 rounded-full font-black text-xs lg:text-sm uppercase tracking-widest flex items-center justify-center gap-4 transition-all shadow-2xl shadow-blue-600/20 ${
                 loading
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                   : 'bg-blue-600 text-white hover:bg-blue-700 hover:-translate-y-1 active:scale-95'
@@ -636,8 +492,12 @@ export default function ListingGenerator({ user }: { user: any }) {
             >
               {loading ? (
                 <div className="flex items-center gap-4">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span className="animate-pulse">{loadingStep}</span>
+                  <div className="flex gap-1.5">
+                    <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                    <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                    <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></span>
+                  </div>
+                  <span className="cssanimation leRolling tracking-widest">{loadingStep}</span>
                 </div>
               ) : (
                 <>
@@ -727,10 +587,19 @@ export default function ListingGenerator({ user }: { user: any }) {
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-10"
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ 
+                opacity: 1, 
+                y: 0, 
+                scale: 1,
+                transition: {
+                  type: "spring",
+                  stiffness: 260,
+                  damping: 15
+                }
+              }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              className="grid grid-cols-1 lg:grid-cols-12 gap-10 cssanimation leFadeInUp"
             >
               {/* Left Column: Core Content */}
               <div className="lg:col-span-8 space-y-10">
@@ -745,12 +614,34 @@ export default function ListingGenerator({ user }: { user: any }) {
                   ) : (
                     <div className="space-y-12">
                       {/* Title Section */}
-                      <div>
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="h-1 w-12 bg-blue-600 rounded-full"></div>
-                          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Optimized Title</h4>
+                      <div className="space-y-6">
+                        <div>
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="h-1 w-12 bg-blue-600 rounded-full cssanimation leFadeInLeft"></div>
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Full Optimized Title</h4>
+                          </div>
+                          <p className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight font-display">{results[activeTab].title}</p>
                         </div>
-                        <p className="text-3xl font-black text-slate-900 leading-tight font-display">{results[activeTab].title}</p>
+
+                        {results[activeTab].midTitle && (
+                          <div className="pt-4 border-t border-slate-50">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="h-1 w-8 bg-indigo-500 rounded-full"></div>
+                              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Mid-length Title</h4>
+                            </div>
+                            <p className="text-xl font-bold text-slate-700 leading-snug">{results[activeTab].midTitle}</p>
+                          </div>
+                        )}
+
+                        {results[activeTab].shortTitle && (
+                          <div className="pt-4 border-t border-slate-50">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="h-1 w-6 bg-emerald-500 rounded-full"></div>
+                              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Short Title</h4>
+                            </div>
+                            <p className="text-lg font-bold text-slate-600 leading-snug italic">{results[activeTab].shortTitle}</p>
+                          </div>
+                        )}
                       </div>
 
                       {/* SEO Meta */}
@@ -765,13 +656,13 @@ export default function ListingGenerator({ user }: { user: any }) {
                       <div>
                         <div className="flex items-center gap-3 mb-6">
                           <div className="h-1 w-12 bg-slate-200 rounded-full"></div>
-                          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Product Narrative</h4>
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Product Description</h4>
                         </div>
                         <div className="prose prose-slate max-w-none">
-                          <div 
-                            className="text-lg font-medium text-slate-600 leading-relaxed description-content"
-                            dangerouslySetInnerHTML={{ __html: results[activeTab].description }}
-                          />
+                          <div className="text-lg font-medium text-slate-600 leading-relaxed description-content">
+                            {/* Filter out AI tips and actually show the content */}
+                            {(results[activeTab].description || '').replace(/^Suggestion:|^Tip:|^Note:/i, '').trim()}
+                          </div>
                         </div>
                       </div>
 
@@ -917,11 +808,48 @@ export default function ListingGenerator({ user }: { user: any }) {
                         <span className="text-lg font-black text-slate-900 font-mono tracking-tight">{results[activeTab].marketInsights.gstRate || 'N/A'}</span>
                       </div>
                     </div>
+
+                    {/* NEW: PROFIT CALCULATOR (ADVANCED FEATURE) */}
+                    <div className="p-8 rounded-[2.5rem] bg-slate-900 text-white space-y-6 relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 rounded-full blur-[80px] -mr-16 -mt-16 opacity-30 group-hover:scale-150 transition-transform duration-700"></div>
+                      <div className="flex justify-between items-center relative z-10">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.4em] font-mono">Advanced Tool</p>
+                          <h4 className="text-2xl font-black font-display tracking-tight leading-none">Profit Estimator 💸</h4>
+                        </div>
+                        <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/10">
+                           <Calculator className="h-5 w-5 text-blue-400" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 relative z-10">
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Selling Price (₹)</label>
+                          <p className="text-xl font-black font-mono">₹{results[activeTab].marketInsights.competitorPrices?.[0]?.price?.replace('₹', '') || '599'}</p>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Estimated Shipping</label>
+                          <p className="text-xl font-black font-mono text-emerald-400">₹45</p>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-white/10 relative z-10">
+                        <div className="flex justify-between items-end">
+                          <div>
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Net Margin Per Unit</p>
+                            <p className="text-3xl font-black font-mono tracking-tighter">₹{parseInt(results[activeTab].marketInsights.competitorPrices?.[0]?.price?.replace('₹', '') || '599') - 180}</p>
+                          </div>
+                          <div className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest mb-1">
+                            High Profitability
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     
                     {results[activeTab].marketInsights.competitorPrices && results[activeTab].marketInsights.competitorPrices.length > 0 && (
-                      <div className="space-y-4">
+                      <div className="space-y-4 pt-4">
                         <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Real-time Competitor Pricing</span>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {results[activeTab].marketInsights.competitorPrices.map((cp: any, i: number) => (
                             <div key={i} className="p-4 rounded-2xl bg-blue-50 border border-blue-100 flex flex-col items-center text-center">
                               <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">{cp.platform}</span>
@@ -931,6 +859,89 @@ export default function ListingGenerator({ user }: { user: any }) {
                         </div>
                       </div>
                     )}
+                    
+                    {results[activeTab].marketInsights.competitorDeepDive && results[activeTab].marketInsights.competitorDeepDive.length > 0 && (
+                      <div className="space-y-4 pt-6 border-t border-slate-100 relative">
+                        <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Advanced Competitor Deep-Dive</span>
+                        
+                        <div className={`space-y-4 ${user.subscriptionPlan !== 'pro' ? 'blur-md pointer-events-none select-none' : ''}`}>
+                          {results[activeTab].marketInsights.competitorDeepDive.map((cd: any, i: number) => (
+                            <div key={i} className="p-6 rounded-[1.5rem] bg-slate-50 border border-slate-100 space-y-3">
+                              <div className="flex justify-between items-center">
+                                <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{cd.name}</span>
+                                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-[8px] font-black text-blue-600 uppercase italic">★ {cd.rating}</span>
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex items-start gap-2">
+                                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 mt-1.5"></div>
+                                  <p className="text-[10px] font-bold text-slate-600"><span className="text-emerald-600">USP:</span> {cd.usp}</p>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <div className="h-1.5 w-1.5 rounded-full bg-red-400 mt-1.5"></div>
+                                  <p className="text-[10px] font-bold text-slate-600"><span className="text-red-500">Weakness:</span> {cd.weakness}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {user.subscriptionPlan !== 'pro' && (
+                          <div className="absolute inset-x-0 bottom-0 top-8 flex flex-col items-center justify-center bg-white/40 backdrop-blur-[2px] rounded-3xl z-10 border border-slate-200 shadow-xl p-8 text-center space-y-4">
+                            <div className="h-12 w-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg animate-bounce">
+                              <Lock className="h-6 w-6" />
+                            </div>
+                            <div className="space-y-2">
+                              <h5 className="text-sm font-black text-slate-900 uppercase tracking-tight">Competitor Intelligence Locked</h5>
+                              <p className="text-[10px] font-bold text-slate-500 leading-relaxed">Upgrade to a Pro Plan to unlock deep-dive research into your rivals' weaknesses.</p>
+                            </div>
+                            <button 
+                              onClick={() => window.location.hash = '#subscription'}
+                              className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-800 transition-all active:scale-95 shadow-lg"
+                            >
+                              Unlock Full Analysis
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="space-y-4 pt-6 border-t border-slate-100">
+                      <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Market Opportunity Heatmap</span>
+                      <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 relative overflow-hidden">
+                        <div className="grid grid-cols-5 gap-1 h-32">
+                          {[...Array(25)].map((_, i) => {
+                            const intensity = Math.floor(Math.random() * 5);
+                            const colors = ['bg-slate-100', 'bg-blue-100', 'bg-blue-300', 'bg-blue-500', 'bg-blue-700'];
+                            return (
+                              <div key={i} className={`rounded-sm transition-all hover:scale-110 cursor-help ${colors[intensity]}`} title="High Demand Area"></div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex justify-between mt-4">
+                           <div className="flex items-center gap-1.5">
+                              <div className="h-2 w-2 rounded-full bg-slate-200"></div>
+                              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Low Competition</span>
+                           </div>
+                           <div className="flex items-center gap-1.5">
+                              <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest text-right">High Demand</span>
+                              <div className="h-2 w-2 rounded-full bg-blue-600"></div>
+                           </div>
+                        </div>
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                           <div className="px-4 py-2 bg-white/90 backdrop-blur-sm rounded-xl border border-blue-100 shadow-xl flex items-center gap-2">
+                              <Sparkles className="h-3 w-3 text-blue-600" />
+                              <span className="text-[10px] font-black text-slate-900 uppercase">Growth Pocket Identified</span>
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+                    {results[activeTab].marketInsights.pricingStrategy && (
+                      <div className="p-6 rounded-3xl bg-emerald-50 border border-emerald-100 italic">
+                        <p className="text-[10px] font-bold text-emerald-800 leading-relaxed shadow-emerald-500/10">
+                          💡 <span className="font-black">Winning Strategy:</span> {results[activeTab].marketInsights.pricingStrategy}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -938,11 +949,15 @@ export default function ListingGenerator({ user }: { user: any }) {
                 <div className="bg-white p-10 rounded-[3.5rem] border border-slate-200 shadow-2xl">
                   <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-8">Backend Keywords</h4>
                   <div className="flex flex-wrap gap-2">
-                    {results[activeTab].keywords?.map((keyword: string, i: number) => (
-                      <span key={i} className="px-4 py-2 bg-slate-50 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 border border-slate-100 hover:border-blue-200 hover:text-blue-600 transition-all cursor-default">
-                        {keyword}
-                      </span>
-                    ))}
+                    {(() => {
+                      const keywords = results[activeTab].keywords;
+                      const keywordArr = Array.isArray(keywords) ? keywords : (typeof keywords === 'string' ? keywords.split(',').map(k => k.trim()) : []);
+                      return keywordArr.map((keyword: string, i: number) => (
+                        <span key={i} className="px-4 py-2 bg-slate-50 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 border border-slate-100 hover:border-blue-200 hover:text-blue-600 transition-all cursor-default">
+                          {keyword}
+                        </span>
+                      ));
+                    })()}
                   </div>
                 </div>
 

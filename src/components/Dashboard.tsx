@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, Variants } from 'motion/react';
 import { 
   MessageCircle, 
   CheckCircle, 
@@ -10,16 +10,20 @@ import {
   Search,
   Truck,
   FileText,
-  ArrowDownToLine,
   BarChart3,
   Package,
-  TrendingDown,
   ArrowUpRight,
   Clock,
   XCircle,
-  Sparkles
+  Sparkles,
+  Shield,
+  CreditCard,
+  Target,
+  Crown,
+  Users,
+  MousePointer2
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { trackCustom } from '../lib/pixel';
 
 const growthData = [
@@ -31,6 +35,26 @@ const growthData = [
   { name: 'Day 12', orders: 62 },
   { name: 'Day 15', orders: 85 },
 ];
+
+const WhatsAppButton = ({ text = "WhatsApp 'DEMO' Now", className = "" }) => {
+  const whatsappNumber = "919023654443";
+  const whatsappLink = `https://wa.me/${whatsappNumber}?text=DEMO`;
+  
+  return (
+    <motion.a
+      href={whatsappLink}
+      target="_blank"
+      rel="noopener noreferrer"
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      onClick={() => trackCustom('WhatsAppClick', { buttonText: text, location: 'Dashboard' })}
+      className={`flex items-center justify-center gap-3 bg-[#25D366] text-white px-8 py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-green-500/20 hover:bg-[#20ba5a] transition-all ${className}`}
+    >
+      <MessageCircle className="h-5 w-5 fill-white" />
+      {text}
+    </motion.a>
+  );
+};
 
 const AIDemoAnimation = () => {
   const [step, setStep] = useState(0);
@@ -80,168 +104,57 @@ const AIDemoAnimation = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-800">
-        {/* Left: Input */}
-        <div className="p-4 sm:p-6 lg:p-8 bg-[#0a0c10]">
-          <div className="space-y-4 md:space-y-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-500">
-                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em]">Step 1: Input Image</span>
-              </div>
-              <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest bg-slate-900 px-2 py-1 rounded-md">Raw Photo</span>
-            </div>
-            
-            <div className="relative aspect-square rounded-xl md:rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center group shadow-2xl max-w-[280px] sm:max-w-[320px] mx-auto">
-              <img 
-                key="product"
-                src="https://www.dropbox.com/scl/fi/xgkm1coqy0to4ytpwil63/1.jpeg?rlkey=q2iyu5xtcfn27nknu582zxxdk&st=zfrbbvfl&dl=1"
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-                alt="Product"
-              />
-              
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
-              
-              {step === 1 && (
-                <motion.div 
-                  initial={{ top: "-10%" }}
-                  animate={{ top: "110%" }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent shadow-[0_0_20px_rgba(59,130,246,0.8)] z-10"
-                />
-              )}
-            </div>
-            <p className="text-[10px] font-bold text-slate-500 text-center italic">"Aapki simple photo ko AI professional banayega"</p>
+        <div className="p-8 bg-[#0a0c10]">
+          <div className="space-y-6 text-center">
+            <img 
+               src="https://www.dropbox.com/scl/fi/xgkm1coqy0to4ytpwil63/1.jpeg?rlkey=q2iyu5xtcfn27nknu582zxxdk&st=zfrbbvfl&dl=1"
+               className="w-full aspect-square object-cover rounded-2xl shadow-2xl relative z-10"
+               alt="Product"
+               referrerPolicy="no-referrer"
+            />
+            <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Input: Raw Marketplace Photo</p>
           </div>
         </div>
 
-        {/* Right: Output */}
-        <div className="p-4 sm:p-6 lg:p-8 bg-[#0d1117]">
-          <div className="space-y-4 md:space-y-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-500">
-                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em]">Step 2: AI Transformation</span>
-              </div>
-              <div className="px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[8px] font-black uppercase tracking-widest">
-                Meesho Optimized
-              </div>
-            </div>
-
-            {/* SEO Score */}
-            <div className="space-y-3">
-              <div className="flex justify-between items-end">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">SEO Score</span>
-                <span className="text-xl font-black text-blue-400 tabular-nums">{seoScore}</span>
-              </div>
-              <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${seoScore}%` }}
-                  className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
-                />
-              </div>
-            </div>
-
-            {/* Optimized Content */}
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Optimized Title</p>
-                <div className="min-h-[3.5rem] bg-slate-900/50 rounded-xl border border-slate-800 p-3 overflow-hidden">
-                  <AnimatePresence mode="wait">
-                    {step >= 2 ? (
-                      <motion.p 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-[11px] md:text-xs font-bold text-slate-200 leading-relaxed"
-                      >
-                        Premium Multi-Color Embroidered Blouse — Heavy Designer Work with Latkans
-                      </motion.p>
-                    ) : (
-                      <div className="flex gap-1">
-                        <div className="w-2 h-4 bg-slate-800 rounded animate-pulse"></div>
-                        <div className="w-16 h-4 bg-slate-800 rounded animate-pulse"></div>
-                        <div className="w-12 h-4 bg-slate-800 rounded animate-pulse"></div>
-                      </div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Key Features</p>
-                <div className="space-y-2">
-                  {[
-                    "Intricate Multi-Color Paisley & Floral Embroidery",
-                    "Premium Phantom Silk Fabric with Soft Lining",
-                    "Stylish Back Tie-Up with Heavy Latkans",
-                    "Perfect for Weddings & Festive Occasions"
-                  ].map((f, i) => (
-                    <motion.div 
-                      key={i}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={step >= 2 ? { opacity: 1, x: 0 } : { opacity: 0 }}
-                      transition={{ delay: i * 0.2 }}
-                      className="flex items-center gap-3 text-[10px] font-bold text-slate-400"
-                    >
-                      <CheckCircle className="h-3 w-3 text-emerald-500 shrink-0" />
-                      <span className="line-clamp-1">{f}</span>
-                    </motion.div>
+        <div className="p-8 bg-[#0d1117] space-y-6">
+          <div className="flex justify-between items-end">
+            <span className="text-[10px] font-black text-slate-500 uppercase">AI SEO Score</span>
+            <span className="text-2xl font-black text-blue-400">{seoScore}</span>
+          </div>
+          <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+             <motion.div animate={{ width: `${seoScore}%` }} className="h-full bg-blue-500" />
+          </div>
+          <div className="space-y-4">
+             <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
+                <p className="text-[10px] font-black text-slate-500 mb-2 uppercase">Optimized Title</p>
+                <p className="text-xs font-bold text-slate-300">
+                   {step >= 2 ? "Premium Multi-Color Embroidered Blouse — Heavy Designer Work with Latkans" : "..."}
+                </p>
+             </div>
+             
+             {step >= 3 ? (
+               <motion.div 
+                 initial={{ opacity: 0, y: 10 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 className="space-y-3"
+               >
+                 <div className="space-y-3">
+                    {[1,2].map(i => (
+                       <div key={i} className="flex items-center gap-2 text-[8px] font-bold text-emerald-400 bg-emerald-500/5 p-2 rounded-lg border border-emerald-500/10">
+                          <CheckCircle className="h-2 w-2" /> Sync {i} OK
+                       </div>
+                    ))}
+                 </div>
+               </motion.div>
+             ) : (
+               <div className="grid grid-cols-2 gap-3 opacity-20">
+                  {[1,2,3,4].map(i => (
+                     <div key={i} className="flex items-center gap-2 text-[9px] font-bold text-slate-700 bg-slate-800/10 p-2 rounded-lg border border-slate-800/20">
+                        <CheckCircle className="h-3 w-3" /> Step {i}
+                     </div>
                   ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Keywords</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {["embroidered blouse", "designer blouse", "black blouse", "heavy work blouse", "meesho ethnic wear"].map((k, i) => (
-                    <motion.span 
-                      key={i}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={step >= 3 ? { opacity: 1, scale: 1 } : { opacity: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[9px] font-bold text-slate-500"
-                    >
-                      {k}
-                    </motion.span>
-                  ))}
-                </div>
-              </div>
-
-              {/* AI Product Images (Model Transformation) */}
-              <div className="space-y-4 pt-6 border-t border-slate-800">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">AI Product Images</p>
-                  <div className="flex items-center gap-1 text-[8px] font-black text-blue-400 uppercase tracking-widest">
-                    <Sparkles className="h-2 w-2" />
-                    Model Generated
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 gap-3 md:gap-4">
-                  {[
-                    { label: 'AI Generated Model Shot', url: 'https://www.dropbox.com/scl/fi/knsoj2rvf23rjrknjkijn/2.jpg?rlkey=4j8uidyhhjsjgnbcfea9tmkdd&st=9seaqwdw&dl=1' }
-                  ].map((img, i) => (
-                    <div 
-                      key={i}
-                      className="relative aspect-[3/4] rounded-xl md:rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden group shadow-xl max-w-[300px]"
-                    >
-                      <img 
-                        src={img.url}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        referrerPolicy="no-referrer"
-                        alt={img.label}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent flex items-end p-3 md:p-4">
-                        <div className="space-y-1">
-                          <span className="text-[8px] font-black text-white uppercase tracking-[0.2em]">{img.label}</span>
-                          <div className="h-0.5 w-4 bg-blue-500 rounded-full"></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+               </div>
+             )}
           </div>
         </div>
       </div>
@@ -250,11 +163,7 @@ const AIDemoAnimation = () => {
 };
 
 const CountdownTimer = () => {
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 23,
-    minutes: 59,
-    seconds: 59
-  });
+  const [timeLeft, setTimeLeft] = useState({ hours: 23, minutes: 59, seconds: 59 });
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -262,26 +171,24 @@ const CountdownTimer = () => {
         if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
         if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
         if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        return { hours: 23, minutes: 59, seconds: 59 }; // Reset for demo urgency
+        return { hours: 23, minutes: 59, seconds: 59 };
       });
     }, 1000);
     return () => clearInterval(timer);
   }, []);
 
   return (
-    <div className="flex gap-2 md:gap-4 justify-center">
+    <div className="flex gap-4 justify-center">
       {[
         { label: 'Hrs', value: timeLeft.hours },
         { label: 'Min', value: timeLeft.minutes },
         { label: 'Sec', value: timeLeft.seconds }
       ].map((unit, i) => (
         <div key={i} className="flex flex-col items-center">
-          <div className="bg-white/20 backdrop-blur-md border border-white/30 rounded-xl md:rounded-2xl w-12 h-12 md:w-16 md:h-16 flex items-center justify-center shadow-lg">
-            <span className="text-xl md:text-2xl font-black text-white tabular-nums">
-              {unit.value.toString().padStart(2, '0')}
-            </span>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-14 h-14 flex items-center justify-center shadow-2xl">
+            <span className="text-xl font-black text-white tabular-nums">{unit.value.toString().padStart(2, '0')}</span>
           </div>
-          <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/60 mt-2">{unit.label}</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-2">{unit.label}</span>
         </div>
       ))}
     </div>
@@ -289,402 +196,276 @@ const CountdownTimer = () => {
 };
 
 export default function Dashboard() {
-  const whatsappNumber = "919023654443";
-  const whatsappLink = `https://wa.me/${whatsappNumber}?text=DEMO`;
-
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
   };
 
-  const WhatsAppButton = ({ text = "WhatsApp 'DEMO' Now", className = "" }) => (
-    <motion.a
-      href={whatsappLink}
-      target="_blank"
-      rel="noopener noreferrer"
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={() => trackCustom('WhatsAppClick', { buttonText: text, location: 'Dashboard' })}
-      className={`flex items-center justify-center gap-3 bg-[#25D366] text-white px-8 py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-green-500/20 hover:bg-[#20ba5a] transition-all ${className}`}
-    >
-      <MessageCircle className="h-5 w-5 fill-white" />
-      {text}
-    </motion.a>
-  );
-
   return (
-    <div className="max-w-4xl mx-auto pb-20 font-sans selection:bg-green-100 selection:text-green-900">
-      <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="space-y-16"
-      >
+    <div className="max-w-7xl mx-auto pb-32 font-sans selection:bg-blue-500/30 selection:text-white bg-transparent relative">
+      {/* Space Background Effects with Stars animation */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-50 perspective-[1000px]">
+         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[120px] mix-blend-screen opacity-50" />
+         <div className="absolute top-[20%] right-[-10%] w-[30%] h-[30%] bg-purple-600/20 rounded-full blur-[100px] mix-blend-screen opacity-50" />
+         <div className="absolute bottom-[20%] left-[10%] w-[50%] h-[50%] bg-indigo-600/10 rounded-full blur-[150px] mix-blend-screen" />
+         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
+         
+         {/* Animated Stars */}
+         {Array.from({ length: 40 }).map((_, i) => (
+            <motion.div
+              key={`star-${i}`}
+              className="absolute bg-white rounded-full z-0"
+              initial={{ 
+                left: `${Math.random() * 100}%`, 
+                top: `${Math.random() * 100}%`, 
+                scale: Math.random() * 0.5 + 0.1, 
+                opacity: Math.random() * 0.5 + 0.2 
+              }}
+              animate={{ 
+                opacity: [0.2, 0.8, 0.2],
+                scale: [0.5, 1, 0.5]
+              }}
+              transition={{
+                duration: Math.random() * 3 + 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: Math.random() * 2
+              }}
+              style={{
+                width: Math.random() * 4 + 1 + 'px',
+                height: Math.random() * 4 + 1 + 'px',
+              }}
+            />
+         ))}
+      </div>
+
+      <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-32">
+        
         {/* 1. HERO SECTION */}
-        <motion.section variants={itemVariants} className="text-center space-y-8 pt-10 px-4">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 mb-4">
-            <TrendingUp className="h-4 w-4 text-blue-600" />
-            <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-blue-600">Meesho Growth Engine</span>
-          </div>
+        <motion.section variants={itemVariants} className="text-center pt-20 lg:pt-32 px-4 max-w-5xl mx-auto space-y-12 relative isolate">
           
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight font-display">
-            Meesho Pe Sales Nahi Aa Rahi? <br />
-            <span className="text-blue-600">Shipping Kharcha Kam Karo! 🚚</span>
-          </h1>
-          
-          <p className="text-base sm:text-lg md:text-xl font-medium text-slate-500 max-w-2xl mx-auto leading-relaxed">
-            Shipping charges zyada hone ki wajah se orders nahi mil rahe? Hamara AI tool aapke product ka weight aur packaging optimize karega aur SEO listings se orders 10x badhayega! 🚀
-          </p>
-
-          <div className="flex flex-col items-center gap-6">
-            <WhatsAppButton />
-            <div className="space-y-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500 animate-pulse">
-                🔥 Offer Ends In: 🔥
-              </p>
-              <div className="bg-slate-900 p-6 rounded-[2.5rem] shadow-2xl">
-                <CountdownTimer />
+          {/* Advanced 3D Hologram Orb (Behind Heading) */}
+          <div className="absolute top-[25%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] md:w-[800px] md:h-[800px] pointer-events-none z-0 opacity-50">
+            <div className="w-full h-full perspective-[2000px] flex items-center justify-center">
+              <div
+                className="animate-orb w-full h-full rounded-full border border-blue-500/30 shadow-[0_0_250px_rgba(37,99,235,0.4)] bg-blue-500/5"
+                style={{ transformStyle: 'preserve-3d' }}
+              >
+                {[1,2,3,4,5,6].map((i) => (
+                  <div
+                    key={`ring-${i}`}
+                    className="animate-ring absolute inset-[-10%] rounded-full border-2 border-blue-400/50"
+                    style={{ 
+                      transformStyle: 'preserve-3d', 
+                      '--rx': `${i * 30}deg`, 
+                      '--ry': `${i * 15}deg`,
+                      animationDelay: `-${i * 3}s`,
+                      animationDuration: `${10 + i * 4}s`
+                    } as any}
+                  >
+                    {/* Glowing nodes on the rings */}
+                    <div className="absolute top-0 left-1/2 w-3 h-3 bg-blue-300 rounded-full shadow-[0_0_20px_rgba(37,99,235,1)]" />
+                    <div className="absolute bottom-0 right-1/2 w-4 h-4 bg-indigo-400 rounded-full shadow-[0_0_25px_rgba(79,70,229,1)]" />
+                  </div>
+                ))}
+                {/* Plasma Core */}
+                <div className="animate-plasma absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-600/40 blur-[80px] rounded-full" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-indigo-400/30 blur-[40px] rounded-full animate-pulse" />
               </div>
             </div>
           </div>
-        </motion.section>
-
-        {/* NEW: AI DEMO ANIMATION SECTION */}
-        <motion.section variants={itemVariants} className="space-y-12 px-4 text-center">
-          <div className="space-y-4">
-            <h2 className="text-3xl md:text-5xl font-black text-slate-900 font-display">
-              Watch AI Create Your <span className="text-blue-600">Listing</span> ✨
-            </h2>
-            <p className="text-lg font-medium text-slate-500 max-w-2xl mx-auto">
-              Real-time demo — See how ListingAI transforms your simple product photos into professional marketplace listings and model shots.
-            </p>
-          </div>
-          
-          <AIDemoAnimation />
-        </motion.section>
-
-        {/* NEW: PROBLEM & SOLUTION SECTION */}
-        <motion.section variants={itemVariants} className="space-y-16 px-4 py-10">
-          <div className="text-center space-y-4">
-            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.4em]">Problem & Solution</p>
-            <h2 className="text-3xl md:text-5xl font-black text-slate-900 font-display">
-              Listing Creation <span className="text-blue-600">Slows Down Growth</span>
-            </h2>
-            <p className="text-lg font-medium text-slate-500 max-w-2xl mx-auto">
-              Manual listing creation takes time, requires keyword research, and often results in poor marketplace visibility.
+          <div className="space-y-6 relative z-10">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-900/30 border border-blue-500/30">
+               <Zap className="h-4 w-4 text-blue-400 animate-pulse" />
+               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Enterprise AI Growth Engine</span>
+            </div>
+            <h1 className="text-5xl md:text-8xl font-black text-white leading-[0.9] tracking-tight font-display">
+              SELL <br />
+              <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">EVERYWHERE</span>
+            </h1>
+            <p className="text-xl md:text-2xl font-medium text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              Meesho pe sales nahi aa rahi? Shipping kharcha profit kha raha hai? <br />
+              <span className="text-white font-black italic">ListingAI is the answer. 🚀</span>
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-            <div className="bg-slate-900 rounded-[2rem] md:rounded-[3rem] p-8 md:p-12 border border-slate-800 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500 rounded-full blur-[100px] -mr-16 -mt-16 opacity-10"></div>
-              <h3 className="text-[10px] font-black text-red-500 uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                The Seller's Struggle
-              </h3>
-              <div className="space-y-5">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-6">
+             <WhatsAppButton />
+             <div className="flex -space-x-3">
+                {[1,2,3,4].map(i => (
+                   <div key={i} className="h-10 w-10 rounded-full border-2 border-slate-950 bg-slate-800 overflow-hidden shadow-xl">
+                      <img src={`https://picsum.photos/seed/${i * 10}/100/100`} alt="User" referrerPolicy="no-referrer" />
+                   </div>
+                ))}
+                <div className="h-10 w-10 rounded-full border-2 border-slate-950 bg-blue-600 flex items-center justify-center text-[10px] font-black text-white shadow-xl">
+                   +5k
+                </div>
+             </div>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-8 md:gap-16 pt-10 border-t border-white/10 grayscale opacity-40">
+             {['AMAZON', 'FLIPKART', 'MEESHO', 'SHOPIFY'].map(brand => (
+                <span key={brand} className="text-xl font-black tracking-widest text-slate-300">{brand}</span>
+             ))}
+          </div>
+        </motion.section>
+
+        {/* 2. DEMO ANIMATION */}
+        <motion.section variants={itemVariants} className="px-4 text-center space-y-12">
+           <AIDemoAnimation />
+        </motion.section>
+
+        {/* 3. AGENT ORCHESTRATION (THE "BRAIN") */}
+        <motion.section variants={itemVariants} className="bg-transparent py-24 px-4 overflow-hidden relative">
+           <div className="max-w-6xl mx-auto space-y-20 relative z-10">
+              <div className="text-center space-y-4">
+                 <h2 className="text-4xl md:text-6xl font-black text-white font-display tracking-tight">Meet Your <span className="text-blue-400">AI Listing Team</span> 🤖</h2>
+                 <p className="text-xl font-medium text-slate-400 max-w-2xl mx-auto">ListingAI orchestrates 4 specialized agents to handle your business end-to-end.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
-                  "Writing SEO-friendly titles manually",
-                  "Understanding platform requirements",
-                  "Maintaining quality at scale",
-                  "Spending hours on cataloging"
-                ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                    <p className="text-xs md:text-sm font-bold text-slate-400 leading-relaxed">{item}</p>
+                  { name: "SEO Analyst", role: "Search Domination", icon: Search, color: "bg-blue-600" },
+                  { name: "Creative Writer", role: "High-Conv Description", icon: FileText, color: "bg-purple-600" },
+                  { name: "Market Specialist", role: "Competitor Intelligence", icon: BarChart3, color: "bg-orange-600" },
+                  { name: "Policy Complier", role: "Zero Account Bans", icon: ShieldCheck, color: "bg-emerald-600" }
+                ].map((agent, i) => (
+                  <div key={i} className="group p-10 rounded-[3rem] bg-white/5 border border-white/10 hover:bg-white/10 hover:shadow-2xl hover:border-blue-500/50 transition-all duration-500 text-center backdrop-blur-md">
+                    <div className={`h-16 w-16 mx-auto rounded-[1.5rem] ${agent.color} shadow-xl text-white flex items-center justify-center mb-6`}>
+                       <agent.icon className="h-8 w-8" />
+                    </div>
+                    <h4 className="text-xl font-black text-white mb-2">{agent.name}</h4>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">{agent.role}</p>
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-8 md:p-12 border border-slate-100 shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-[100px] -mr-16 -mt-16 opacity-10"></div>
-              <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                The ListingAI Edge
-              </h3>
-              <div className="space-y-5">
-                {[
-                  "SEO-optimized titles per marketplace",
-                  "Platform-compliant bullet points",
-                  "Keyword-rich content automatically",
-                  "Category and tag suggestions"
-                ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <CheckCircle className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <p className="text-xs md:text-sm font-bold text-slate-700 leading-relaxed">{item}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+           </div>
         </motion.section>
 
-        {/* 2. PROBLEM SECTION */}
-        <motion.section variants={itemVariants} className="bg-red-50 rounded-[2rem] md:rounded-[3rem] p-8 md:p-16 border border-red-100">
-          <h2 className="text-xl md:text-3xl font-black text-slate-900 mb-8 md:mb-10 text-center font-display leading-tight">
-            Kya Aapka Profit Shipping Mein Ja Raha Hai? 🤔
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            {[
-              { icon: Truck, title: "High Shipping Cost", desc: "Weight zyada hone ki wajah se shipping charges profit kha rahe hain." },
-              { icon: Search, title: "Low Visibility", desc: "Aapki listing Meesho search mein upar nahi aa rahi? SEO ki kami hai." },
-              { icon: BarChart3, title: "High RTO Rates", desc: "Galat packaging aur description ki wajah se returns zyada aa rahe hain." }
-            ].map((p, i) => (
-              <div key={i} className="bg-white p-6 md:p-8 rounded-2xl md:rounded-3xl shadow-sm space-y-3 md:space-y-4">
-                <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
-                  <p.icon className="h-5 w-5 md:h-6 md:w-6" />
-                </div>
-                <h4 className="text-base md:text-lg font-black text-slate-900">{p.title}</h4>
-                <p className="text-xs md:text-sm font-medium text-slate-500 leading-relaxed">{p.desc}</p>
+        {/* 4. GROWTH ANALYTICS */}
+        <motion.section variants={itemVariants} className="px-4 max-w-6xl mx-auto space-y-16">
+           <div className="bg-slate-900 rounded-[4rem] p-10 md:p-20 text-white shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-600 rounded-full blur-[150px] -mr-64 -mt-64 opacity-20"></div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center relative z-10">
+                 <div className="space-y-8">
+                    <h2 className="text-4xl md:text-5xl font-black font-display leading-[0.95]">See Your Profits <br /> <span className="text-blue-400 font-display italic animate-pulse">Skyrocket! 📈</span></h2>
+                    <p className="text-lg text-slate-400 font-medium">Don't just take our word for it. After switching to AI-Optimized listings, our sellers see an average of <span className="text-white font-black">450% increase in search visibility.</span></p>
+                    
+                    <div className="grid grid-cols-2 gap-6">
+                       <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
+                          <p className="text-[10px] font-black uppercase text-blue-400 mb-2">Order Boost</p>
+                          <p className="text-3xl font-black">+120%</p>
+                       </div>
+                       <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
+                          <p className="text-[10px] font-black uppercase text-emerald-400 mb-2">RTO Reduced</p>
+                          <p className="text-3xl font-black">-35%</p>
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="h-[350px] bg-white/5 rounded-[2.5rem] p-8 border border-white/10 backdrop-blur-md">
+                    <ResponsiveContainer width="100%" height="100%">
+                       <AreaChart data={growthData}>
+                          <defs>
+                             <linearGradient id="colorOrdersHero" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                             </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
+                          <Tooltip contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '16px' }} />
+                          <Area type="monotone" dataKey="orders" stroke="#3b82f6" strokeWidth={5} fillOpacity={1} fill="url(#colorOrdersHero)" />
+                       </AreaChart>
+                    </ResponsiveContainer>
+                 </div>
               </div>
-            ))}
-          </div>
-          <p className="text-center mt-8 md:mt-10 text-red-600 font-bold italic text-sm md:text-base px-4">
-            "Meesho pe wahi jeet-ta hai jiska shipping rate sabse kam aur SEO sabse best hota hai!"
-          </p>
+           </div>
         </motion.section>
 
-        {/* 3. SOLUTION SECTION */}
-        <motion.section variants={itemVariants} className="text-center space-y-6 md:space-y-8 px-4">
-          <h2 className="text-2xl md:text-4xl font-black text-slate-900 font-display leading-tight">
-            ListingAI: Meesho Sellers Ka Secret Weapon ⚡
-          </h2>
-          <p className="text-base md:text-lg font-medium text-slate-500 max-w-2xl mx-auto leading-relaxed">
-            Hamara AI tool aapke product ka perfect weight calculate karta hai aur aisi SEO optimized listing banata hai jo Meesho algorithm ko pasand aaye. Kam shipping = More Orders!
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-            <div className="bg-blue-600 rounded-[2rem] md:rounded-[2.5rem] p-8 md:p-10 text-white text-left space-y-4 shadow-xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150"></div>
-              <Package className="h-8 w-8 md:h-10 md:w-10 text-blue-200" />
-              <h4 className="text-lg md:text-xl font-black">Low Shipping Tool</h4>
-              <p className="text-xs md:text-sm font-medium text-blue-100 leading-relaxed">
-                Packaging optimize karke weight category kam karein aur shipping charges pe 30-40% bachayein.
-              </p>
-            </div>
-            <div className="bg-slate-900 rounded-[2rem] md:rounded-[2.5rem] p-8 md:p-10 text-white text-left space-y-4 shadow-xl relative overflow-hidden border-2 border-emerald-500/30 group">
-              <div className="absolute top-4 right-4 bg-emerald-500 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-bounce">
-                Most Popular 🔥
+        {/* 5. PRICING SECTION - CORE CONVERSION */}
+        <motion.section id="pricing" variants={itemVariants} className="max-w-6xl mx-auto px-4 space-y-20">
+           <div className="text-center space-y-6">
+              <h2 className="text-4xl md:text-6xl font-black text-white font-display">Ready To Grow? <br /> Choose Your <span className="text-blue-400">Plan</span></h2>
+              <div className="flex items-center justify-center gap-4">
+                 <span className="text-sm font-bold text-slate-400">Monthly</span>
+                 <div className="h-6 w-12 bg-blue-600 rounded-full p-1 flex justify-end cursor-pointer">
+                    <div className="h-4 w-4 bg-white rounded-full"></div>
+                 </div>
+                 <span className="text-sm font-black text-white flex items-center gap-2">
+                    Yearly <span className="px-2 py-0.5 bg-emerald-500/20 shadow-lg border border-emerald-500/30 text-emerald-400 text-[9px] rounded-md font-black italic uppercase">Save 60%</span>
+                 </span>
               </div>
-              <FileText className="h-8 w-8 md:h-10 md:w-10 text-emerald-400" />
-              <h4 className="text-lg md:text-xl font-black text-emerald-400">SEO Listing Generator</h4>
-              <p className="text-xs md:text-sm font-medium text-slate-400 leading-relaxed">
-                Aise keywords jo Meesho pe search hote hain. Title aur description jo customer ko click karne pe majboor karde.
-              </p>
-              <div className="flex items-center gap-2 text-emerald-400 text-[10px] font-black uppercase tracking-widest">
-                <ArrowUpRight className="h-4 w-4" />
-                Boost Search Rank Instantly
-              </div>
-            </div>
-          </div>
-        </motion.section>
+           </div>
 
-        {/* NEW: GROWTH VISUALIZATION SECTION */}
-        <motion.section variants={itemVariants} className="space-y-8 md:space-y-10 px-4">
-          <div className="bg-white rounded-[2.5rem] md:rounded-[3.5rem] p-8 md:p-16 border border-slate-100 shadow-2xl space-y-8 md:space-y-12">
-            <div className="text-center space-y-3 md:space-y-4">
-              <h2 className="text-2xl md:text-4xl font-black text-slate-900 font-display leading-tight">Orders Growth Dekhiye! 📈</h2>
-              <p className="text-base md:text-lg font-medium text-slate-500">SEO Listing update karne ke baad orders aise badhte hain.</p>
-            </div>
-
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={growthData}>
-                  <defs>
-                    <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} />
-                  <Tooltip 
-                    contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '15px'}}
-                    itemStyle={{color: '#2563eb', fontWeight: 900, fontSize: '12px', textTransform: 'uppercase'}}
-                  />
-                  <Area type="monotone" dataKey="orders" stroke="#2563eb" strokeWidth={4} fillOpacity={1} fill="url(#colorOrders)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-6 rounded-3xl bg-blue-50 border border-blue-100 text-center">
-                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Search Visibility</p>
-                <p className="text-3xl font-black text-slate-900">+450%</p>
-              </div>
-              <div className="p-6 rounded-3xl bg-emerald-50 border border-emerald-100 text-center">
-                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">Order Conversion</p>
-                <p className="text-3xl font-black text-slate-900">+120%</p>
-              </div>
-              <div className="p-6 rounded-3xl bg-purple-50 border border-purple-100 text-center">
-                <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-2">RTO Reduction</p>
-                <p className="text-3xl font-black text-slate-900">-35%</p>
-              </div>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* 4. COMPARISON SECTION */}
-        <motion.section variants={itemVariants} className="space-y-10 px-4">
-          <div className="text-center">
-            <h2 className="text-2xl md:text-3xl font-black text-slate-900 font-display">Meesho Success Comparison 📊</h2>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">Before vs After ListingAI</p>
-          </div>
-          <div className="bg-white rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden">
-            <div className="grid grid-cols-2 text-center">
-              <div className="p-8 bg-slate-50 border-r border-slate-100">
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Without Us</p>
-                <div className="space-y-4">
-                  <p className="text-sm font-bold text-red-500">High Shipping: ₹80+</p>
-                  <p className="text-sm font-bold text-red-500">Search Rank: Page 10+</p>
-                  <p className="text-sm font-bold text-red-500">Orders: 2-3 Per Day</p>
-                </div>
-              </div>
-              <div className="p-8 bg-emerald-50">
-                <p className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-4">With ListingAI</p>
-                <div className="space-y-4">
-                  <p className="text-sm font-bold text-emerald-600">Low Shipping: ₹45-50</p>
-                  <p className="text-sm font-bold text-emerald-600">Search Rank: Top 5</p>
-                  <p className="text-sm font-bold text-emerald-600">Orders: 50+ Per Day</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* 5. HOW IT WORKS */}
-        <motion.section variants={itemVariants} className="bg-slate-900 rounded-[3.5rem] p-12 md:p-16 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[100px] -mr-32 -mt-32 opacity-20"></div>
-          <h2 className="text-3xl font-black mb-12 text-center font-display">3 Simple Steps To Success 🚀</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10">
-            {[
-              { step: "01", icon: Package, title: "Optimize Weight", desc: "Product details dalein aur lowest shipping category payein." },
-              { step: "02", icon: Search, title: "Generate SEO", desc: "AI se Meesho-friendly title aur description banayein." },
-              { step: "03", icon: TrendingUp, title: "Scale Orders", desc: "Listing update karein aur orders aate hue dekhein." }
-            ].map((s, i) => (
-              <div key={i} className="text-center space-y-4">
-                <div className="h-16 w-16 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center mx-auto text-blue-400">
-                  <s.icon className="h-8 w-8" />
-                </div>
-                <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em]">{s.step}</span>
-                <h4 className="text-xl font-black">{s.title}</h4>
-                <p className="text-sm font-medium text-slate-400 leading-relaxed">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </motion.section>
-
-        {/* 6. BENEFITS */}
-        <motion.section variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-12 px-4 items-center">
-          <div className="space-y-8">
-            <h2 className="text-3xl font-black text-slate-900 font-display">Meesho Sellers Ke Liye Best Kyun? 💎</h2>
-            <div className="space-y-6">
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                "Lowest Shipping Rates - Har order pe ₹30-40 bachao",
-                "High Search Visibility - Listing hamesha top pe rahegi",
-                "Zero Technical Knowledge - Sab kuch AI automatic karega",
-                "More Profit - Kam kharcha, zyada orders = Huge Profit"
-              ].map((b, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
-                    <CheckCircle className="h-4 w-4" />
-                  </div>
-                  <p className="text-lg font-bold text-slate-700">{b}</p>
+                { name: 'Growth Trial', period: '7 Days', price: '0', icon: Sparkles, color: 'text-slate-400', bg: 'bg-white/5', text: 'text-white', cta: 'Start 7-Day Trial', highlight: false, features: ['3 Listings / Day', '3 Competitor Analysis / Day', 'SEO Score Analysis', 'All Marketplaces'] },
+                { name: 'ListingAI Max', period: '3 Days', price: '99', icon: Crown, color: 'text-rose-400', bg: 'bg-white/5', text: 'text-white', cta: 'Get Max Access', highlight: false, features: ['10 Listings / Day', '5 Competitor Analysis / Day', '3 A+ Content / Day', '3 AI Photoshoots / Day', '3 Low Shipping / Day'] },
+                { name: '1 Month', period: 'Month', price: '399', icon: Zap, color: 'text-blue-400', bg: 'bg-slate-900', text: 'text-white', cta: 'Get Monthly', highlight: false, features: ['15 Listings / Day', '7 Competitor Analysis / Day', '4 A+ Content / Day', '3 AI Photoshoots / Day', '4 Low Shipping / Day'] },
+                { name: '1 Year', period: 'Year', price: '1,999', icon: Star, color: 'text-amber-400', bg: 'bg-white/5', text: 'text-white', cta: 'Get Yearly', highlight: true, features: ['20 Listings / Day', '10 Competitor Analysis / Day', '5 A+ Content / Day', '5 AI Photoshoots / Day', '5 Low Shipping / Day', '5 Bulk Mega Listings / Day'] }
+              ].map((plan, i) => (
+                <div key={i} className={`relative p-8 lg:p-10 rounded-[3rem] border ${plan.highlight ? 'border-blue-500 ring-8 ring-blue-900/40 shadow-2xl shadow-blue-600/20' : 'border-white/10 '} ${plan.bg} ${plan.text || ''} transition-all duration-500 hover:-translate-y-2 backdrop-blur-md`}>
+                   {plan.highlight && <span className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-600 text-white text-[10px] font-black uppercase rounded-full tracking-widest whitespace-nowrap">Best Seller</span>}
+                   <plan.icon className={`h-10 w-10 mb-6 ${plan.color}`} />
+                   <h4 className="text-xl font-black mb-2 font-display">{plan.name}</h4>
+                   <div className="flex items-baseline gap-1 mb-8">
+                      <span className="text-4xl font-black font-display text-white">₹{plan.price}</span>
+                      <span className="text-slate-400 text-[10px] font-bold uppercase">/ {plan.period}</span>
+                   </div>
+                   <div className="space-y-4 mb-10 min-h-[220px]">
+                      {plan.features.map((feature, j) => (
+                         <div key={j} className="flex gap-3 items-start">
+                            <CheckCircle className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
+                            <p className="text-xs font-bold text-slate-300 leading-relaxed tracking-tight">{feature}</p>
+                         </div>
+                      ))}
+                   </div>
+                   <button onClick={() => window.location.hash = '#auth'} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${plan.highlight ? 'bg-blue-600 text-white hover:bg-blue-500' : 'bg-slate-800 border border-slate-700 text-white hover:bg-slate-700'}`}>
+                      {plan.cta}
+                   </button>
                 </div>
               ))}
-            </div>
-            <WhatsAppButton />
-          </div>
-          <div className="bg-slate-50 rounded-[3rem] p-10 border border-slate-100 flex items-center justify-center">
-            <Truck className="h-40 w-40 text-blue-100" />
-          </div>
+           </div>
         </motion.section>
 
-        {/* 7. SOCIAL PROOF */}
-        <motion.section variants={itemVariants} className="text-center space-y-12 px-4">
-          <div className="space-y-4">
-            <h2 className="text-3xl font-black text-slate-900 font-display">500+ Meesho Sellers Are Growing! 🤝</h2>
-            <div className="flex items-center justify-center gap-1 text-yellow-500">
-              {[1, 2, 3, 4, 5].map(i => <Star key={i} className="h-5 w-5 fill-yellow-500" />)}
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {[
-              { name: "Amit", role: "Meesho Gold Seller", text: "Pehle shipping charges ki wajah se margin nahi tha. ListingAI ne weight optimize kiya aur ab har order pe ₹35 extra bach rahe hain!" },
-              { name: "Suresh", role: "New Seller", text: "SEO listing generator kamaal hai. 2 din mein hi orders aana shuru ho gaye. Best tool for Meesho!" }
-            ].map((t, i) => (
-              <div key={i} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm text-left space-y-4">
-                <p className="text-sm font-medium text-slate-600 italic leading-relaxed">"{t.text}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-400 text-xs">
-                    {t.name[0]}
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-slate-900">{t.name}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.role}</p>
-                  </div>
-                </div>
+        {/* 6. URGENT FINAL BLOCK */}
+        <motion.section variants={itemVariants} className="px-4">
+           <div className="max-w-4xl mx-auto bg-orange-500 rounded-[4rem] p-16 text-center text-white space-y-10 shadow-2xl shadow-orange-500/30 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <h2 className="text-4xl md:text-5xl font-black font-display tracking-tight">Special Launch Offer! ⏳</h2>
+              <p className="text-xl font-bold opacity-90 max-w-2xl mx-auto">Join the top 5% of E-commerce sellers. Get Yearly Empire Plan at 60% OFF. <br /> <span className="underline decoration-wavy underline-offset-8 decoration-yellow-300">Offer expires when the timer hits zero!</span></p>
+              
+              <CountdownTimer />
+
+              <div className="flex flex-col items-center gap-6 pt-6">
+                 <WhatsAppButton text="Claim Offer via WhatsApp" className="bg-white text-orange-600 hover:bg-slate-50 shadow-2xl" />
+                 <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">Verified Secure Checkout • 24/7 Support</p>
               </div>
-            ))}
-          </div>
-        </motion.section>
-
-        {/* 8. URGENCY SECTION */}
-        <motion.section variants={itemVariants} className="bg-orange-500 rounded-[3rem] p-12 text-center text-white space-y-8 shadow-2xl shadow-orange-500/20">
-          <div className="space-y-4">
-            <h2 className="text-3xl font-black font-display">Special Meesho Offer! ⏳</h2>
-            <p className="text-lg font-bold text-orange-100">
-              Join the elite group of Meesho sellers. <br />
-              Get Lifetime Access at 70% OFF. Only for today!
-            </p>
-          </div>
-          
-          <CountdownTimer />
-
-          <div className="flex items-center justify-center gap-4">
-            <div className="bg-white/20 px-6 py-3 rounded-2xl backdrop-blur-md border border-white/20">
-              <span className="text-2xl font-black">12</span>
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Spots Left</p>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* 9. FINAL CTA */}
-        <motion.section variants={itemVariants} className="text-center space-y-10 px-4">
-          <div className="space-y-4">
-            <h2 className="text-3xl md:text-5xl font-black text-slate-900 font-display leading-tight">
-              Ready To Dominate <br />
-              Meesho Search? 🚀
-            </h2>
-            <p className="text-lg font-medium text-slate-500">
-              Abhi WhatsApp karein aur apna free demo lein!
-            </p>
-          </div>
-          <div className="flex flex-col items-center gap-6">
-            <WhatsAppButton text="Send 'DEMO' on WhatsApp now" className="w-full max-w-md h-20 text-lg" />
-            <div className="flex items-center gap-4 text-slate-400">
-              <ShieldCheck className="h-5 w-5" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Trusted by 500+ Meesho Sellers</span>
-            </div>
-          </div>
+           </div>
         </motion.section>
 
         {/* Footer */}
-        <footer className="text-center pt-10 border-t border-slate-100">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">
-            © 2026 ListingAI Meesho Optimizer. All Rights Reserved.
+        <footer className="text-center py-20 border-t border-white/5 relative">
+          <div className="flex justify-center gap-10 mb-8 opacity-40 hover:opacity-100 transition-all text-slate-400">
+             <Star className="h-4 w-4" />
+             <Users className="h-4 w-4" />
+             <Target className="h-4 w-4" />
+             <MousePointer2 className="h-4 w-4" />
+          </div>
+          <p className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500">
+            © 2026 ListingAI Enterprise Growth Hub. All Rights Reserved.
           </p>
         </footer>
       </motion.div>
     </div>
   );
 }
+
+

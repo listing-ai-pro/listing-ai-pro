@@ -8,8 +8,8 @@ import { trackCustom } from '../lib/pixel';
 const plans = [
   {
     id: 'trial',
-    name: 'Free Trial',
-    subtitle: 'Test the waters',
+    name: 'Growth Trial',
+    subtitle: '7-Day Engine Launch',
     price: '0',
     perDay: '0',
     period: '7 days',
@@ -20,13 +20,12 @@ const plans = [
     textColor: 'text-slate-500',
     features: [
       '3 Listings / Day',
-      '2 White Backgrounds / Day',
       '3 Competitor Analysis / Day',
-      '2 A+ Content / Day',
-      'All Marketplaces',
       'SEO Score Analysis',
-      '❌ No AI Photoshoot',
-      '❌ No Low Shipping Tool'
+      'All Marketplaces',
+      '❌ No Advanced Deep-Dive',
+      '❌ No AI Photoshoot Studio',
+      '❌ No Bulk Generator'
     ]
   },
   {
@@ -43,11 +42,11 @@ const plans = [
     textColor: 'text-rose-500',
     features: [
       '10 Listings / Day',
-      '3 White Backgrounds / Day',
       '5 Competitor Analysis / Day',
       '3 A+ Content / Day',
-      '3 AI Photoshoot Studio / Day',
-      '3 AI Low Shipping Tool / Day'
+      '3 AI Photoshoot / Day',
+      '3 AI Low Shipping / Day',
+      '❌ No Bulk Generator'
     ]
   },
   {
@@ -55,7 +54,7 @@ const plans = [
     name: '1 Month',
     subtitle: 'Casual sellers',
     price: '399',
-    perDay: '13',
+    perDay: '13.30',
     period: 'month',
     duration: '30 DAYS ACCESS',
     icon: Zap,
@@ -64,11 +63,11 @@ const plans = [
     textColor: 'text-blue-500',
     features: [
       '15 Listings / Day',
-      '4 White Backgrounds / Day',
       '7 Competitor Analysis / Day',
       '4 A+ Content / Day',
-      '3 AI Photoshoot Studio / Day',
-      '4 AI Low Shipping Tool / Day'
+      '3 AI Photoshoot / Day',
+      '4 AI Low Shipping / Day',
+      '❌ No Bulk Generator'
     ]
   },
   {
@@ -76,7 +75,7 @@ const plans = [
     name: '1 Year',
     subtitle: 'Active sellers',
     price: '1,999',
-    perDay: '5',
+    perDay: '5.48',
     period: 'year',
     duration: '365 DAYS ACCESS',
     icon: Star,
@@ -86,11 +85,11 @@ const plans = [
     popular: true,
     features: [
       '20 Listings / Day',
-      '5 White Backgrounds / Day',
       '10 Competitor Analysis / Day',
       '5 A+ Content / Day',
-      '5 AI Photoshoot Studio / Day',
-      '5 AI Low Shipping Tool / Day'
+      '5 AI Photoshoot / Day',
+      '5 AI Low Shipping / Day',
+      '5 Bulk Mega Listings / Day'
     ]
   }
 ];

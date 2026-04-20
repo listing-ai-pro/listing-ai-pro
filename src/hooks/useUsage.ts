@@ -10,11 +10,11 @@ export function useUsage(userOrId: any) {
 
   const [usage, setUsage] = useState<Record<UsageType, number>>({
     listingsGenerated: 0,
-    whiteBackgrounds: 0,
     marketAnalysis: 0,
     aplusGenerated: 0,
     photoshoots: 0,
-    shippingOptimizations: 0
+    shippingOptimizations: 0,
+    bulkGenerated: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -29,20 +29,20 @@ export function useUsage(userOrId: any) {
         const data = doc.data();
         setUsage({
           listingsGenerated: data.listingsGenerated || 0,
-          whiteBackgrounds: data.whiteBackgrounds || 0,
           marketAnalysis: data.marketAnalysis || 0,
           aplusGenerated: data.aplusGenerated || 0,
           photoshoots: data.photoshoots || 0,
-          shippingOptimizations: data.shippingOptimizations || 0
+          shippingOptimizations: data.shippingOptimizations || 0,
+          bulkGenerated: data.bulkGenerated || 0
         });
       } else {
         setUsage({
           listingsGenerated: 0,
-          whiteBackgrounds: 0,
           marketAnalysis: 0,
           aplusGenerated: 0,
           photoshoots: 0,
-          shippingOptimizations: 0
+          shippingOptimizations: 0,
+          bulkGenerated: 0
         });
       }
       setLoading(false);

@@ -53,10 +53,13 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#fcfdfe]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Initializing ListingAI</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center gap-6">
+          <div className="h-16 w-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin shadow-[0_0_30px_rgba(37,99,235,0.3)]"></div>
+          <div className="space-y-1 text-center">
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/80 font-mono">Mission: Initialize</p>
+            <h4 className="text-xl font-black text-white font-display">ListingAI</h4>
+          </div>
         </div>
       </div>
     );
@@ -71,10 +74,13 @@ export default function App() {
   // Usually Auth component redirects/updates state.
   if (!userProfile) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#fcfdfe]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Setting up your profile...</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center gap-6">
+          <div className="h-16 w-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin shadow-[0_0_30px_rgba(79,70,229,0.3)]"></div>
+          <div className="space-y-1 text-center">
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-indigo-500/80 font-mono">Syncing Profile</p>
+            <h4 className="text-xl font-black text-white font-display">ListingAI</h4>
+          </div>
         </div>
       </div>
     );

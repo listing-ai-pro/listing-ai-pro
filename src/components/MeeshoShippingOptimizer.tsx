@@ -62,7 +62,7 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
 
       const contents = {
         parts: [
-          { text: "Generate a highly optimized product photo for Meesho shipping algorithms. The goal is to make the product look as compact and lightweight as possible. Use a clean, minimalist background, a top-down flatlay angle, and ensure the product is folded or placed to look extremely small. This photo is intended to help the product stay in the lowest shipping weight slab (under 500g) by emphasizing its smallness and lack of bulk." },
+          { text: "Generate a photorealistic e-commerce image based on this proven strategy: 'Meesho’s algorithm can sometimes miscalculate volumetric weight based on image presentation, leading to higher shipping slab estimations. Adjust Padding: Create an image with specific padding where the product occupies EXACTLY 65–70% of the area to lower estimated shipping costs. Vertical Alignment: Ensure your product is perfectly centered and vertically aligned upright (e.g., Ghost mannequin, no folding, no flat-lay) in the primary image to avoid category-based shipping penalties.' Strictly follow these padding and alignment rules while ensuring the apparel's original design is fully and beautifully visible." },
           {
             inlineData: {
               data: image.split(',')[1],
@@ -210,33 +210,33 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-50 border border-orange-100 mb-6"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 mb-6 shadow-[0_0_20px_rgba(249,115,22,0.1)]"
           >
-            <Zap className="h-4 w-4 text-orange-600" />
-            <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-orange-600">Logistics Optimization</span>
+            <Zap className="h-4 w-4 text-orange-400" />
+            <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-orange-400">Logistics Optimization</span>
           </motion.div>
-          <h2 className="text-4xl lg:text-7xl font-black tracking-tight text-slate-900 mb-6 font-display leading-[1.1] lg:leading-[0.9]">
-            Meesho <span className="text-orange-600">Shipping</span><br />
+          <h2 className="text-3xl lg:text-6xl font-black tracking-tight text-white mb-6 font-display leading-[1.1] lg:leading-[0.9]">
+            Meesho <span className="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">Shipping</span><br />
             Optimizer.
           </h2>
-          <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-slate-200 shadow-sm w-full lg:w-fit mb-6">
-            <div className="h-10 w-10 rounded-xl bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/20">
+          <div className="flex items-center gap-4 bg-slate-900/60 backdrop-blur-xl p-4 rounded-3xl border border-white/5 shadow-2xl w-full lg:w-fit mb-6">
+            <div className="h-10 w-10 rounded-xl bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/30">
               <Zap className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1 lg:flex-none">
-              <p className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Daily Credits</p>
+              <p className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1 font-mono">Daily Credits</p>
               <div className="flex items-center gap-3">
-                <div className="h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-1.5 w-24 bg-white/5 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-orange-600 transition-all duration-500" 
+                    className="h-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)] transition-all duration-500" 
                     style={{ width: `${Math.min(100, (usage.shippingOptimizations / (PLAN_LIMITS[user.activePlanId || 'trial']?.shippingOptimizations || 1)) * 100)}%` }}
                   ></div>
                 </div>
-                <span className="text-xs font-black text-slate-900 whitespace-nowrap">{usage.shippingOptimizations} / {PLAN_LIMITS[user.activePlanId || 'trial']?.shippingOptimizations || 1}</span>
+                <span className="text-xs font-black text-white whitespace-nowrap font-mono">{usage.shippingOptimizations} / {PLAN_LIMITS[user.activePlanId || 'trial']?.shippingOptimizations || 1}</span>
               </div>
             </div>
           </div>
-          <p className="text-base lg:text-xl font-medium text-slate-500 leading-relaxed max-w-xl mx-auto lg:mx-0">
+          <p className="text-sm lg:text-lg font-medium text-slate-400 leading-relaxed max-w-xl mx-auto lg:mx-0">
             Optimize weight & packaging to get the lowest shipping rates on Meesho. Beat the algorithm and save on every order.
           </p>
         </div>
@@ -350,10 +350,11 @@ export default function MeeshoShippingOptimizer({ user }: { user: any }) {
             <div className="absolute top-0 right-0 w-24 h-24 bg-blue-600 rounded-full blur-3xl -mr-12 -mt-12 opacity-10"></div>
             <ShieldCheck className="h-8 w-8 text-blue-600 shrink-0" />
             <div className="relative">
-              <p className="text-[10px] font-black text-blue-900 mb-2 uppercase tracking-widest">Expert Logistics Tip</p>
+              <p className="text-[10px] font-black text-blue-900 mb-2 uppercase tracking-widest">Expert Algorithm Tip</p>
               <p className="text-xs font-bold text-blue-700 leading-relaxed">
-                Meesho's shipping slabs change at 500g, 1kg, and 2kg. Even 1 gram over 500g can double your shipping cost. 
-                Always use lightweight polybags instead of cardboard for products under 500g.
+                Meesho’s algorithm can miscalculate volumetric weight based on presentation. 
+                Ensure the product occupies EXACTLY 65–70% of the canvas area. 
+                Keep the primary image perfectly centered and vertically aligned (no flat-lay). This layout actively prevents category-based shipping penalties!
               </p>
             </div>
           </div>

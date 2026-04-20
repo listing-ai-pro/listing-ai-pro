@@ -33,19 +33,34 @@
     },
     "DailyStats": {
       "title": "DailyStats",
-      "description": "Daily usage statistics for a user. Limits: Listings (20), White BG (5), Market Analysis (10), A+ Content (5), Photoshoots (4), Shipping (5).",
+      "description": "Daily usage statistics for a user. Limits: Listings (20), Bulk (5), Market Analysis (10), A+ Content (5), Photoshoots (5), Shipping (5).",
       "type": "object",
       "properties": {
         "userId": { "type": "string", "description": "User ID" },
         "date": { "type": "string", "format": "date", "description": "Date" },
         "listingsGenerated": { "type": "number", "description": "Number of listings generated" },
-        "whiteBackgrounds": { "type": "number", "description": "Number of white backgrounds generated" },
+        "bulkGenerated": { "type": "number", "description": "Number of bulk listings generated" },
         "marketAnalysis": { "type": "number", "description": "Number of market analysis generated" },
         "aplusGenerated": { "type": "number", "description": "Number of A+ content generated" },
         "photoshoots": { "type": "number", "description": "Number of AI photoshoots generated" },
         "shippingOptimizations": { "type": "number", "description": "Number of shipping optimizations performed" }
       },
-      "required": ["userId", "date", "listingsGenerated", "whiteBackgrounds", "marketAnalysis", "aplusGenerated", "photoshoots", "shippingOptimizations"]
+      "required": ["userId", "date", "listingsGenerated", "bulkGenerated", "marketAnalysis", "aplusGenerated", "photoshoots", "shippingOptimizations"]
+    },
+    "AiLog": {
+      "title": "AiLog",
+      "description": "Log of AI API requests for real-time monitoring",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "User ID" },
+        "type": { "type": "string", "description": "Type of AI request" },
+        "model": { "type": "string", "description": "AI model used" },
+        "status": { "type": "string", "enum": ["success", "error"], "description": "Status of the request" },
+        "errorMessage": { "type": "string", "description": "Error message if failed" },
+        "latency": { "type": "number", "description": "Time taken in milliseconds" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Timestamp of the request" }
+      },
+      "required": ["userId", "type", "model", "status", "timestamp"]
     }
   },
   "firestore": {
@@ -60,6 +75,10 @@
     "/AdminMsg/{msgId}": {
       "schema": "AdminMsg",
       "description": "Admin broadcast messages"
+    },
+    "/ai_logs/{logId}": {
+      "schema": "AiLog",
+      "description": "AI API traffic logs"
     }
   }
 }

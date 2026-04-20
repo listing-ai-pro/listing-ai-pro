@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle, X, Send, Loader2, User, Sparkles, TrendingUp, ShieldCheck, Zap } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { generateGeminiContent } from '../lib/geminiService';
 import { PLAN_LIMITS } from '../lib/usage';
 import { subscribeToActions, Action } from '../lib/actions';
+import { HUMANIZER_PROMPT } from '../lib/humanizer';
 
 const getSystemPrompt = (currentTab: string, lastAction: Action | null, user: any) => `You are JD, the Support & Growth Manager for ListingAI. You are a successful seller from Surat, Gujarat, with 5 years of experience.
 
@@ -11,6 +13,8 @@ TONE & STYLE:
 - Speak like a real human, not a bot. Use a mix of Hindi and English (Hinglish) naturally.
 - Be friendly, professional, and persuasive, but avoid sounding like a scripted telemarketer.
 - VARIETY IS KEY: Never repeat the same sales pitch word-for-word. Adapt your language to the user's specific product or problem.
+
+${HUMANIZER_PROMPT}
 
 CURRENT CONTEXT:
 - User: "${user?.displayName || 'Guest'}" (Seller ID: ${user?.sellerId || user?.uid?.substring(0, 8) || 'GUEST-LAI'})
@@ -23,8 +27,14 @@ STRICT RULES:
 3. DYNAMIC SELLING: Only start selling when you detect interest. When you do, vary your approach:
    - Instead of "Correct listing hi growth ki foundation hai", you might say "Bhai, listing sahi hogi tabhi toh customer rukega" or "SEO optimize karo, orders apne aap badhenge."
    - Mention the 15-20% growth potential naturally, e.g., "Pehle mahine mein hi 20% tak jump dekhne ko mil sakta hai agar SEO set hai."
-4. STEP-BY-STEP: Use numbered steps for processes.
-5. BULLET POINTS: Use bullet points for features.
+4. DYNAMIC FORMATTING (PREMIUM LOOK):
+   - Use # for main topic headings and ## for sub-sections.
+   - Use **BOLD** (e.g. **important**) for key terms, percentages, or critical actions.
+   - Use bullet points (using -) ALWAYS for features or lists.
+   - Keep messages structured with CLEAR subheadings to make them easy to scan.
+   - Use emojis sparingly but effectively to highlight growth (🚀, 📈, 💎).
+5. STEP-BY-STEP: Use numbered steps for processes.
+6. BULLET POINTS: Use bullet points for features.
 
 CORE CONCEPTS (Express these naturally, don't copy-paste):
 - SEO Listing is the foundation of growth.
@@ -90,14 +100,14 @@ export default function JDChatbot({ currentTab = 'Dashboard', user }: { currentT
   };
 
   return (
-    <div className="fixed bottom-8 right-8 z-[1000]">
+    <div className="fixed bottom-4 right-4 lg:bottom-8 lg:right-8 z-[1000] flex flex-col items-end">
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="absolute bottom-20 right-0 w-[380px] h-[550px] bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 flex flex-col overflow-hidden"
+            className="mb-4 w-[calc(100vw-32px)] sm:w-[440px] h-[600px] lg:h-[720px] max-h-[calc(100vh-120px)] bg-white rounded-[2.5rem] lg:rounded-[3rem] shadow-2xl border border-slate-100 flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="p-6 bg-slate-900 text-white flex items-center justify-between relative overflow-hidden">
@@ -131,12 +141,41 @@ export default function JDChatbot({ currentTab = 'Dashboard', user }: { currentT
                   key={i}
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`max-w-[85%] p-4 rounded-2xl text-sm font-medium leading-relaxed shadow-sm ${
+                  <div className={`max-w-[85%] p-5 rounded-3xl text-sm font-medium leading-loose shadow-sm relative overflow-hidden ${
                     msg.role === 'user' 
                       ? 'bg-blue-600 text-white rounded-tr-none' 
-                      : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
+                      : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none ring-1 ring-slate-100/50'
                   }`}>
-                    {msg.content}
+                    {msg.role === 'model' && (
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full blur-3xl -mr-12 -mt-12 opacity-50"></div>
+                    )}
+                    <div className="markdown-container relative z-10">
+                      <ReactMarkdown
+                        components={{
+                          h1: ({ children }) => <h1 className="text-lg font-black mb-3 mt-1 uppercase tracking-tight text-blue-600 font-display italic">{children}</h1>,
+                          h2: ({ children }) => <h2 className="text-sm font-black mb-2 mt-4 uppercase tracking-[0.2em] text-slate-900 border-b-2 border-slate-100 pb-1 flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                            {children}
+                          </h2>,
+                          h3: ({ children }) => <h3 className="text-sm font-black mb-1 mt-3 text-slate-800 flex items-center gap-2">
+                             <TrendingUp className="h-3 w-3 text-blue-500" />
+                             {children}
+                          </h3>,
+                          p: ({ children }) => <p className="mb-3 last:mb-0 leading-relaxed text-[13px]">{children}</p>,
+                          strong: ({ children }) => <strong className="font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-100/50">{children}</strong>,
+                          ul: ({ children }) => <ul className="space-y-2 mb-4 mt-2">{children}</ul>,
+                          ol: ({ children }) => <ol className="space-y-2 mb-4 mt-2 list-decimal ml-6 marker:text-blue-500 marker:font-black">{children}</ol>,
+                          li: ({ children }) => (
+                            <li className="flex gap-3 items-start group">
+                              <Zap className="mt-1 h-3 w-3 text-blue-400 shrink-0 group-hover:text-blue-600 transition-colors" />
+                              <span className="text-[13px]">{children}</span>
+                            </li>
+                          ),
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 </motion.div>
               ))}
@@ -158,7 +197,7 @@ export default function JDChatbot({ currentTab = 'Dashboard', user }: { currentT
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                   placeholder="Ask JD about growing your sales..."
-                  className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-blue-500 transition-colors"
+                  className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
                 />
                 <button
                   onClick={handleSend}

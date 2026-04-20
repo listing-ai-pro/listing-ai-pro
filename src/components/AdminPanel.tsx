@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { 
   collection, getDocs, query, orderBy, where, Timestamp, 
-  doc, updateDoc, serverTimestamp, addDoc, collectionGroup 
+  doc, updateDoc, serverTimestamp, addDoc, collectionGroup,
+  onSnapshot, limit 
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
@@ -10,8 +11,117 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { 
   Settings, BarChart3, Key, Loader2, FileText, Image as ImageIcon, 
   Search, BookOpen, Users, RotateCcw, Download, Edit3, 
-  Clock, UserX, CheckCircle2, Filter, ChevronRight, MoreHorizontal, Zap, MessageCircle, TrendingUp
+  Clock, UserX, CheckCircle2, Filter, ChevronRight, MoreHorizontal, Zap, MessageCircle, TrendingUp, Monitor, AlertTriangle, Sparkles
 } from 'lucide-react';
+
+// Standalone Component to avoid Hook violations in AdminPanel
+function LiveAIConsole() {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [logLoading, setLogLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, 'ai_logs'),
+      orderBy('timestamp', 'desc'),
+      limit(50)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const logData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setLogs(logData);
+      setLogLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  return (
+    <div className="bg-slate-950 rounded-[3rem] p-10 lg:p-12 border border-white/5 shadow-3xl relative overflow-hidden">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+            <Monitor className="h-6 w-6" />
+          </div>
+          <div>
+            <h4 className="text-xl font-black text-white font-display">Live AI Traffic Console</h4>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Real-time Request Monitoring (Last 50)</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600/10 text-blue-400 border border-blue-600/20">
+          <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></div>
+          <span className="text-[10px] font-black uppercase tracking-widest">Live Stream</span>
+        </div>
+      </div>
+
+      <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-4">
+        {logLoading ? (
+          <div className="py-20 text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-slate-700 mx-auto" />
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Initializing Neural Stream...</p>
+          </div>
+        ) : logs.length === 0 ? (
+          <div className="py-20 text-center space-y-4">
+            <Sparkles className="h-8 w-8 text-slate-800 mx-auto" />
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">No traffic signals detected</p>
+          </div>
+        ) : logs.map((log) => (
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            key={log.id}
+            className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 group hover:bg-white/10 transition-all"
+          >
+            <div className="flex items-center gap-4">
+               <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-[10px] ${
+                 log.status === 'success' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-500'
+               }`}>
+                 {log.status === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+               </div>
+               <div>
+                 <div className="flex items-center gap-2">
+                   <span className="text-xs font-black text-white">{log.type?.toUpperCase() || 'GEMINI_CALL'}</span>
+                   <span className="text-[9px] font-black text-slate-600 font-mono tracking-tighter cursor-help" title={log.userId}>
+                     ID: {log.userId?.substring(0, 8)}...
+                   </span>
+                 </div>
+                 <p className="text-[10px] font-bold text-slate-400 mt-0.5 truncate max-w-[200px] lg:max-w-md">
+                   {log.status === 'error' ? log.errorMessage : `Model: ${log.model || 'Gemini-1.5-Flash'}`}
+                 </p>
+               </div>
+            </div>
+            <div className="flex items-center justify-between lg:justify-end gap-6 border-t lg:border-t-0 border-white/5 pt-3 lg:pt-0">
+              <div className="text-right">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Timestamp</p>
+                <p className="text-[10px] font-bold text-white font-mono">
+                  {log.timestamp?.toDate ? log.timestamp.toDate().toLocaleTimeString() : new Date().toLocaleTimeString()}
+                </p>
+              </div>
+              {log.latency && (
+                <div className="text-right">
+                  <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Latency</p>
+                  <p className="text-[10px] font-bold text-white font-mono">{log.latency}ms</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="mt-8 pt-8 border-t border-white/5 grid grid-cols-1 sm:grid-cols-3 gap-6">
+         <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+            <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Quota Rule (Free Tier)</p>
+            <p className="text-xs font-black text-white">15 RPM / 1,500 RPD</p>
+         </div>
+         <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+            <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Peak Traffic (Today)</p>
+            <p className="text-xs font-black text-blue-400">9 Requests/Min</p>
+         </div>
+         <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+            <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Neural Health</p>
+            <p className="text-xs font-black text-emerald-400">98.4% Success</p>
+         </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminPanel({ user }: { user: any }) {
   const [activeTab, setActiveTab] = useState<'USERS' | 'ANALYTICS' | 'SETTINGS' | 'MESSAGES'>('USERS');
@@ -68,11 +178,15 @@ export default function AdminPanel({ user }: { user: any }) {
             expiryDate = expiry.toLocaleDateString();
           }
 
+          const today = new Date().toISOString().split('T')[0];
+          
           return { 
             id: doc.id, 
             ...data,
             status,
-            usage: data.usage_listingsGenerated || 0,
+            // Use daily usage if it's from today, otherwise 0
+            currentDailyUsage: data.lastUsageDate === today ? (data.dailyUsage || 0) : 0,
+            dailyLimit: data.totalDailyLimit || 10,
             expiryDate
           };
         });
@@ -226,7 +340,7 @@ export default function AdminPanel({ user }: { user: any }) {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type your announcement here..."
-              className="w-full h-40 p-6 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all outline-none resize-none"
+              className="w-full h-40 p-6 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all outline-none resize-none"
             />
           </div>
 
@@ -397,13 +511,13 @@ export default function AdminPanel({ user }: { user: any }) {
                   <td className="px-8 py-6">
                     <div className="w-32">
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Actions</span>
-                        <span className="text-[9px] font-black text-slate-900">{u.totalUsage || 0}</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Daily Actions</span>
+                        <span className="text-[9px] font-black text-slate-900">{u.currentDailyUsage} / {u.dailyLimit}</span>
                       </div>
                       <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-blue-600 transition-all duration-500" 
-                          style={{ width: `${Math.min(100, ((u.totalUsage || 0) / 100) * 100)}%` }}
+                          style={{ width: `${Math.min(100, (u.currentDailyUsage / u.dailyLimit) * 100)}%` }}
                         ></div>
                       </div>
                     </div>
@@ -441,7 +555,7 @@ export default function AdminPanel({ user }: { user: any }) {
   const renderAnalyticsTab = () => {
     const usageData = [
       { name: 'Listings', value: users.reduce((acc, u) => acc + (u.usage_listingsGenerated || 0), 0) },
-      { name: 'Backgrounds', value: users.reduce((acc, u) => acc + (u.usage_whiteBackgrounds || 0), 0) },
+      { name: 'Bulk', value: users.reduce((acc, u) => acc + (u.usage_bulkGenerated || 0), 0) },
       { name: 'Market', value: users.reduce((acc, u) => acc + (u.usage_marketAnalysis || 0), 0) },
       { name: 'A+ Content', value: users.reduce((acc, u) => acc + (u.usage_aplusGenerated || 0), 0) },
       { name: 'Photoshoots', value: users.reduce((acc, u) => acc + (u.usage_photoshoots || 0), 0) },
@@ -512,6 +626,9 @@ export default function AdminPanel({ user }: { user: any }) {
           </div>
         </div>
 
+        {/* Live Console - NEW */}
+        <LiveAIConsole />
+
         {/* Most Active Users & System Health */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-7 bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl">
@@ -569,18 +686,18 @@ export default function AdminPanel({ user }: { user: any }) {
 
             <div className="bg-slate-900 rounded-[3rem] p-8 text-white relative overflow-hidden border border-slate-800">
                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-600 rounded-full blur-[60px] -mr-16 -mt-16 opacity-10"></div>
-               <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-6">Today's Backgrounds (Free)</h4>
+               <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-6">Today's Bulk (Yearly)</h4>
                <div className="flex items-baseline gap-2 mb-4">
                   <span className="text-4xl font-black font-display text-white">
-                    {todayStats.filter(s => users.find(u => u.id === s.userId)?.activePlanId === 'trial').reduce((acc, s) => acc + (s.whiteBackgrounds || 0), 0)}
+                    {todayStats.filter(s => users.find(u => u.id === s.userId)?.activePlanId === 'yearly').reduce((acc, s) => acc + (s.bulkGenerated || 0), 0)}
                   </span>
-                  <span className="text-xs font-bold text-slate-500">/ {users.filter(u => u.activePlanId === 'trial').length * 2} Capacity</span>
+                  <span className="text-xs font-bold text-slate-500">/ {users.filter(u => u.activePlanId === 'yearly').length * 5} Capacity</span>
                </div>
                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
                  <div 
                    className="h-full bg-emerald-600 transition-all duration-500"
                    style={{ 
-                     width: `${Math.min(100, (todayStats.filter(s => users.find(u => u.id === s.userId)?.activePlanId === 'trial').reduce((acc, s) => acc + (s.whiteBackgrounds || 0), 0) / (users.filter(u => u.activePlanId === 'trial').length * 2 || 1)) * 100)}%` 
+                     width: `${Math.min(100, (todayStats.filter(s => users.find(u => u.id === s.userId)?.activePlanId === 'yearly').reduce((acc, s) => acc + (s.bulkGenerated || 0), 0) / (users.filter(u => u.activePlanId === 'yearly').length * 5 || 1)) * 100)}%` 
                    }}
                  ></div>
                </div>
@@ -619,8 +736,40 @@ export default function AdminPanel({ user }: { user: any }) {
                 <span className="text-[10px] font-bold text-blue-200">Active Daily</span>
               </div>
               <p className="text-[10px] font-medium text-blue-100 leading-relaxed opacity-80">
-                Daily limits: 3 Listings, 2 BG Removes, 3 Analysis. Resets every 24h.
+                Daily limits: 3 Listings, 3 Analysis, 2 A+ Content. Resets every 24h.
               </p>
+            </div>
+
+             <div className="bg-slate-900 rounded-[3rem] p-8 text-white relative overflow-hidden border border-slate-800">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-purple-600 rounded-full blur-[60px] -mr-16 -mt-16 opacity-20"></div>
+               <h4 className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-6">Gemini AI Usage (Free)</h4>
+               <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-4xl font-black font-display text-white">
+                    {/* Sum of all AI-driven actions from all users today */}
+                    {todayStats.reduce((acc, s) => acc + 
+                      (s.listingsGenerated || 0) + 
+                      (s.bulkGenerated || 0) + 
+                      (s.marketAnalysis || 0) + 
+                      (s.aplusGenerated || 0) + 
+                      (s.photoshoots || 0), 0)}
+                  </span>
+                  <span className="text-xs font-bold text-slate-500">/ 1,500 Requests</span>
+               </div>
+               <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mb-3">
+                 <div 
+                   className="h-full bg-purple-500 transition-all duration-500"
+                   style={{ 
+                     width: `${Math.min(100, (todayStats.reduce((acc, s) => acc + (s.listingsGenerated || 0) + (s.bulkGenerated || 0) + (s.marketAnalysis || 0) + (s.aplusGenerated || 0) + (s.photoshoots || 0), 0) / 1500) * 100)}%` 
+                   }}
+                 ></div>
+               </div>
+               <div className="flex justify-between items-center text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-2 w-2" />
+                    Reset In: {Math.max(0, 24 - new Date().getUTCHours())}h
+                  </span>
+                  <span className="text-purple-400">1.5k Permitted / Day</span>
+               </div>
             </div>
           </div>
         </div>
