@@ -6,3 +6,4 @@ playwright
 curl_cffi
 patchright
 msgspec
+browserforge
