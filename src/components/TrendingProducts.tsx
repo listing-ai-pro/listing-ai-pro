@@ -34,8 +34,11 @@ export default function TrendingProducts() {
     setData([]);
 
     try {
-      // Try hitting the Python API
-      const res = await axios.get(`http://localhost:8000/api/${activeTab === 'suppliers' ? 'suppliers/top' : `trends/${activeTab}`}`);
+      // Set this to your Railway URL once deployed, for example: 
+      // const API_BASE_URL = 'https://scraper-backend-production.up.railway.app';
+      const API_BASE_URL = 'http://localhost:8000';
+      
+      const res = await axios.get(`${API_BASE_URL}/api/${activeTab === 'suppliers' ? 'suppliers/top' : `trends/${activeTab}`}`);
       if (Array.isArray(res.data)) {
         setData(res.data);
       } else {
