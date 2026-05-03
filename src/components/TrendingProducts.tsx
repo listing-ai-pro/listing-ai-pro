@@ -36,7 +36,7 @@ export default function TrendingProducts() {
     try {
       // Set this to your Railway URL once deployed, for example: 
       // const API_BASE_URL = 'https://scraper-backend-production.up.railway.app';
-      const API_BASE_URL = 'http://localhost:8000';
+      const API_BASE_URL = 'https://listing-ai-pro.onrender.com';
       
       const res = await axios.get(`${API_BASE_URL}/api/${activeTab === 'suppliers' ? 'suppliers/top' : `trends/${activeTab}`}`);
       if (Array.isArray(res.data)) {
