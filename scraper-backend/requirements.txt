@@ -4,3 +4,4 @@ scrapling
 pydantic
 playwright
 curl_cffi
+patchright
