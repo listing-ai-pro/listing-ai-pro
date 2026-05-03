@@ -3,8 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
-from scrapling import StealthyFetcher
 import json
+import os
+import asyncio
+
+try:
+    from scrapling import StealthyFetcher
+    HAS_SCRAPLING = True
+except Exception as e:
+    print(f"Scrapling failed to load: {e}")
+    HAS_SCRAPLING = False
 
 app = FastAPI(title="ListingAI Scraper API", version="1.0")
 
@@ -33,6 +41,8 @@ class Supplier(BaseModel):
 
 # Helper to configure the Scrapling Fetcher
 def get_fetcher():
+    if not HAS_SCRAPLING:
+        raise Exception("Scrapling is not available. Please ensure Playwright and browser dependencies are installed.")
     # StealthyFetcher is designed to bypass Cloudflare, DataDome, etc.
     # It uses optimized settings to mimic a real user browser
     return StealthyFetcher(headless=True)
