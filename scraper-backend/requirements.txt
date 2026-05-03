@@ -3,3 +3,4 @@ uvicorn
 scrapling
 pydantic
 playwright
+curl_cffi
