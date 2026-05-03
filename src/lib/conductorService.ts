@@ -38,43 +38,73 @@ export class ConductorService {
       }
     }
 
-    const baseContext = `
-      Product Identity: ${input.productQuery}
-      Visual Context: ${visualContext}
-      Additional Info: ${input.additionalInfo || 'None'}
-      Market Intelligence: ${input.marketDataStr || 'General Market Knowledge'}
-    `;
+    const ALL_RULES: Record<string, string> = {
+      amazon: "Amazon.in: SEO Product Title, 5 Bullet Points, Long Product Description, Backend Search Keywords, Specification Table.",
+      flipkart: "Flipkart: SEO Product Title, Key Features (bullet points), Product Description, Specification Table, Variant Details.",
+      ebay: "eBay: SEO Title, Item Specifics, Specification Table, Product Description, Category Suggestion, Pricing Format, Shipping + Return Copy.",
+      etsy: "Etsy: Clear Human-Friendly Title, 13 Etsy Tags, Attributes, Specification Table, Description (ensure first 2 lines are SEO Optimized), Storytelling Description, Personalization Fields, Shipping + Processing Time Copy, Photo Shot List.",
+      meesho: "Meesho: Catalog Title, Short Description, Product Highlights, Specification Table, Category Attributes, Catalog Variants.",
+      shopify: "Shopify: Product Title, Short & Long Description, Specification Table, SEO Meta Title, Meta Description, URL Handle, Image Alt Text, Product Tags.",
+      myntra: "Myntra: Fashion Title, Style Attributes, Specification Table, Product Description, Return Reduction Fields.",
+      website: "Direct Website: SEO Product Title, Meta Description, H1/H2 Structure, Product Description, Specification Table, Social Share Tags."
+    };
+
+    const targetPlatform = input.platforms[0] || 'amazon';
+    const platformName = ALL_RULES[targetPlatform]?.split(':')[0] || targetPlatform;
 
     // Stage 2: Collective Intelligence (Consolidated Call)
-    onStepUpdate?.('Quantum Search: Running Real-time Market & SEO Intelligence...');
+    onStepUpdate?.(`Agent Conductor: Researching HSN & GST on authoritative portals for ${platformName}...`);
+    onStepUpdate?.(`Quantum Search: Running Real-time Market & SEO Intelligence for ${platformName}...`);
+    onStepUpdate?.(`SEO Machine: Drafting optimized listing for ${platformName}...`);
+
+    const platformRule = ALL_RULES[targetPlatform] || `${targetPlatform}: Standard marketplace format.`;
 
     const collectivePrompt = `
-      You are the Collective Intelligence Engine. You must act as 5 specialized sub-agents simultaneously.
+      You are the Lead Marketplace SEO & Growth Architect and Tax Compliance Expert.
+      TASK: Generate a high-conversion, SEO-optimized product listing ONLY for: ${targetPlatform}.
       
-      CONTEXT:
+      CRITICAL COMPLIANCE RESEARCH:
+      - Use Google Search to find the OFFICIAL HSN Code and GST Rate for this product in India.
+      - Prioritize data from cbic-gst.gov.in, gstcouncil.gov.in, or official GST portals.
+      - DO NOT guess or use outdated data. Accuracy is the highest priority for HSN/GST.
+
+      CRITICAL INSTRUCTION:
+      Return ONLY a JSON object with one key: "${targetPlatform}". 
+      DO NOT generate entries for any other platforms. This is to save API credits and fix UI display issues.
+      
+      PLATFORM SPECIFIC REQUIREMENTS:
+      - ${platformRule}
+      
+      INSTRUCTIONS FOR EXTRA FIELDS:
+      - Any field mentioned in the platform requirements that does not natively fit in "title", "description", or "bulletPoints" MUST be placed in "platformSpecificFields".
+      - For Shopify "Short & Long Description": put the short one in "description" and the long one in "platformSpecificFields" under "Long Description".
+      - For Etsy: ensure the first 2 lines of high-quality "description" are heavily SEO optimized.
+      - For Website: ensure the content has a clear H1 (Title) and H2 (Subheadings) structure.
       Product Identity: ${input.productQuery}
       Visual Context: ${visualContext}
       Additional Info: ${input.additionalInfo || 'None'}
-      
-      SUB-AGENT TASKS:
-      1. Market Intelligence: Use Google Search to find current prices for this product on Amazon.in, Flipkart, and Meesho. Find top 3 competitors and their USPs/Weaknesses.
-      2. SEO Analyst: Identify 20 high-performing keywords (Focus: Volume, Search Intent for ${input.platforms.join(', ')}).
-      3. Creative Writer: Draft a high-conversion product narrative focusing on emotional hooks.
-      4. Competitor Specialist: Develop a pricing strategy to beat rivals based on researched data.
-      5. Compliance Expert: Note strict constraints for ${input.platforms.join(', ')} (Chars, Prohibited terms).
 
-      SYNTHESIS & OUTPUT:
-      Now, combine all these expert insights into final, production-ready listings for: ${input.platforms.join(', ')}.
-      
-      PLATFORM RULES:
-      - Amazon.in: 200 char title, 5 bullet points, description, search terms.
-      - Flipkart: 150 char title, key features.
-      - Meesho: Simple, weight/dimensions focused.
-      - Etsy: 13 tags, detailed materials.
-      - eBay: Item specifics (Color, Material, etc).
+      SUB-AGENT INTELLIGENCE TO APPLY:
+      1. Market Intelligence: Research current trends, and COMPETITOR pricing across Amazon, Flipkart, etc.
+      2. Compliance & Tax Architect: Research the 100% accurate HSN Code and GST Slab for this item.
+      3. SEO Analyst: Identify 20 target keywords for ${targetPlatform}.
+      4. Creative Writer: Persuasive copy that triggers emotions.
 
-      Return ONLY a valid JSON object where keys are the platform names.
-      Values must be objects: { "title", "midTitle", "shortTitle", "description", "bulletPoints", "keywords", "platformSpecificFields", "seoScore", "seoAnalysis" }.
+      SYNTHESIS & OUTPUT SCHEMA (JSON):
+      {
+        "${targetPlatform}": { 
+          "title", 
+          "midTitle", 
+          "shortTitle", 
+          "description", 
+          "bulletPoints", 
+          "keywords", 
+          "platformSpecificFields", 
+          "seoScore", 
+          "seoAnalysis": { "titleScore", "descriptionScore", "keywordScore", "suggestions" },
+          "marketInsights": { "hsnCode", "gstRate", "competitorPrices", "competitorDeepDive", "pricingStrategy" }
+        }
+      }
     `;
 
     const systemInstruction = `

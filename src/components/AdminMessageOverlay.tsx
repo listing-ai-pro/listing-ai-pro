@@ -32,11 +32,34 @@ export default function AdminMessageOverlay({ user }: { user: any }) {
           (msg.target === 'TRIAL' && user.activePlanId === 'trial');
 
         if (isTargeted) {
+          // Check for 24h expiry
+          const createdAt = msg.createdAt?.toDate?.() || new Date(msg.createdAt);
+          const oneDayAgo = new Date();
+          oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+          if (createdAt < oneDayAgo) {
+            setActiveMessage(null);
+            return;
+          }
+
           // Check if user has already seen this message
           const seenIds = user.seenMessageIds || [];
           if (!seenIds.includes(msg.id)) {
             setActiveMessage(msg);
             setDismissed(false);
+            
+            // Auto mark as seen so it doesn't show again on refresh
+            const markAsSeen = async () => {
+              try {
+                const userRef = doc(db, 'users', user.uid);
+                await updateDoc(userRef, {
+                  seenMessageIds: arrayUnion(msg.id)
+                });
+              } catch (e) {
+                console.error("Auto mark seen failed:", e);
+              }
+            };
+            markAsSeen();
           } else {
             setActiveMessage(null);
           }

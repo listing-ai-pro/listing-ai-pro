@@ -8,7 +8,7 @@ import { trackCustom } from '../lib/pixel';
 import { trackAction } from '../lib/actions';
 import { SpaceLoader } from './SpaceLoader';
 import { motion, AnimatePresence } from 'motion/react';
-import { Copy, Check, Sparkles, Loader2, AlertCircle, ChevronRight, ChevronLeft, Image as ImageIcon, UploadCloud, Download, BarChart3, Lightbulb, Lock, Zap, Calculator } from 'lucide-react';
+import { Copy, Check, Sparkles, Loader2, AlertCircle, ChevronRight, ChevronLeft, Image as ImageIcon, UploadCloud, Download, BarChart3, Lightbulb, Lock, Zap, Calculator, Camera } from 'lucide-react';
 
 const MARKETPLACES = [
   { id: 'amazon', name: 'Amazon.in', type: 'GLOBAL', icon: '📦' },
@@ -46,7 +46,8 @@ export default function ListingGenerator({ user }: { user: any }) {
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   const togglePlatform = (id: string) => {
-    setPlatforms(prev => prev.includes(id) ? [] : [id]);
+    // Strictly ONLY one platform at a time
+    setPlatforms([id]);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'front' | 'back') => {
@@ -110,8 +111,22 @@ export default function ListingGenerator({ user }: { user: any }) {
         parsedResults = { [platforms[0]]: resultText };
       }
       
-      setResults(parsedResults);
-      setActiveTab(Object.keys(parsedResults)[0] || platforms[0]);
+      // Strict filtering: Only keep the results for the platforms we actually asked for
+      // This prevents Gemini "hallucinations" of extra platforms from cluttering the UI
+      const filteredResults: Record<string, any> = {};
+      const targetId = platforms[0];
+      
+      if (parsedResults[targetId]) {
+        filteredResults[targetId] = parsedResults[targetId];
+      } else if (Object.keys(parsedResults).length > 0) {
+        // Fallback: Use the first result key returned if ID doesn't match exactly
+        filteredResults[targetId] = Object.values(parsedResults)[0];
+      } else {
+        filteredResults[targetId] = resultText; // Raw text fallback
+      }
+      
+      setResults(filteredResults);
+      setActiveTab(targetId);
       await trackUsage(user.uid, 'listingsGenerated');
       
       // Track Facebook Pixel Event
@@ -409,7 +424,7 @@ export default function ListingGenerator({ user }: { user: any }) {
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-5xl mx-auto"
         >
-          <div className="bg-white p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] border border-slate-200 shadow-2xl mb-8 lg:mb-12 relative overflow-hidden">
+          <div className="bg-white p-5 lg:p-10 rounded-[2rem] lg:rounded-[3.5rem] border border-slate-200 shadow-2xl mb-8 lg:mb-12 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-50"></div>
             
             <AnimatePresence mode="wait">
@@ -420,13 +435,13 @@ export default function ListingGenerator({ user }: { user: any }) {
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-6"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-10">
                     {[
                       { type: 'front', label: 'Primary View', ref: frontInputRef, state: frontImage },
                       { type: 'back', label: 'Secondary View', ref: backInputRef, state: backImage }
                     ].map((img) => (
-                      <div key={img.type}>
-                        <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">{img.label}</label>
+                      <div key={img.type} className="space-y-3">
+                        <label className="block text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{img.label}</label>
                         <input 
                           type="file" 
                           ref={img.ref as any} 
@@ -436,73 +451,73 @@ export default function ListingGenerator({ user }: { user: any }) {
                         />
                         <div 
                           onClick={() => (img.ref as any).current?.click()}
-                          className={`group relative h-64 lg:h-80 border-2 border-dashed rounded-[1.5rem] lg:rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${
-                            img.state ? 'border-blue-600 bg-white' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-blue-300'
+                          className={`group relative h-48 sm:h-64 lg:h-80 border-2 border-dashed rounded-[1.5rem] lg:rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${
+                            img.state ? 'border-blue-500 bg-white shadow-lg' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-blue-300'
                           }`}
                         >
                           {img.state ? (
                             <>
                               <img src={img.state} alt={img.label} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <span className="text-white font-black uppercase tracking-widest text-[10px]">Change Image</span>
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                                <div className="flex items-center gap-2 px-4 py-2 bg-white/20 rounded-full border border-white/30">
+                                   <Camera className="h-4 w-4 text-white" />
+                                   <span className="text-white font-black uppercase tracking-widest text-[9px]">Re-upload</span>
+                                </div>
                               </div>
                             </>
                           ) : (
                             <>
-                              <div className="h-12 w-12 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl bg-blue-50 flex items-center justify-center mb-3 lg:mb-4 group-hover:scale-110 transition-transform">
-                                <UploadCloud className="h-6 w-6 lg:h-8 w-8 text-blue-600" />
+                              <div className="h-10 w-10 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl bg-blue-50 flex items-center justify-center mb-3 lg:mb-4 group-hover:scale-110 transition-transform">
+                                <UploadCloud className="h-5 w-5 lg:h-8 lg:w-8 text-blue-600" />
                               </div>
-                              <span className="text-[11px] lg:text-sm font-black text-slate-700">Drop or Click to Upload</span>
-                              <span className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Max 20MB</span>
+                              <span className="text-[10px] lg:text-sm font-black text-slate-700">Click to Upload</span>
+                              <span className="text-[8px] font-bold text-slate-400 mt-1 lg:mt-2 uppercase tracking-widest">JPG, PNG up to 20MB</span>
                             </>
                           )}
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Contextual Intelligence (Optional)</label>
+                  <div className="space-y-3">
+                    <label className="block text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Contextual Intelligence (Optional)</label>
                     <textarea
                       value={additionalInfo}
                       onChange={(e) => setAdditionalInfo(e.target.value)}
                       placeholder="Add specific details like material, size, or special features..."
-                      className="w-full h-24 lg:h-32 rounded-xl lg:rounded-[1.5rem] border-2 border-slate-100 bg-slate-50 p-4 lg:p-6 text-slate-900 placeholder-slate-300 focus:border-blue-600 focus:bg-white focus:ring-0 transition-all resize-none font-bold text-sm leading-relaxed"
+                      className="w-full h-24 lg:h-32 rounded-xl lg:rounded-[1.5rem] border-2 border-slate-100 bg-slate-50 p-4 lg:p-6 text-slate-900 placeholder-slate-300 focus:border-blue-600 focus:bg-white focus:ring-0 transition-all resize-none font-bold text-xs lg:text-sm leading-relaxed"
                     />
                   </div>
                 </motion.div>
             </AnimatePresence>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-0">
             <button
               onClick={() => setStep(1)}
-              className="w-full sm:w-auto px-10 py-4 rounded-full font-black text-[10px] lg:text-xs uppercase tracking-widest flex items-center justify-center gap-3 text-slate-500 hover:bg-white hover:shadow-xl transition-all border border-slate-200 bg-white"
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-[10px] lg:text-xs uppercase tracking-widest flex items-center justify-center gap-3 text-slate-500 hover:bg-white hover:shadow-xl transition-all border border-slate-100 bg-white/50"
             >
-              <ChevronLeft className="h-4 w-4 lg:h-5 lg:w-5" />
+              <ChevronLeft className="h-4 w-4" />
               Back
             </button>
             <button
               onClick={generateListing}
               disabled={loading}
-              className={`w-full sm:w-auto px-12 py-5 rounded-full font-black text-xs lg:text-sm uppercase tracking-widest flex items-center justify-center gap-4 transition-all shadow-2xl shadow-blue-600/20 ${
+              className={`w-full sm:w-auto px-10 py-5 rounded-2xl font-black text-[10px] lg:text-sm uppercase tracking-widest flex items-center justify-center gap-4 transition-all shadow-2xl relative overflow-hidden group/btn ${
                 loading
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 hover:-translate-y-1 active:scale-95'
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-blue-600/30'
               }`}
             >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-white/10 to-blue-400/0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700"></div>
               {loading ? (
-                <div className="flex items-center gap-4">
-                  <div className="flex gap-1.5">
-                    <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                    <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                    <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></span>
-                  </div>
+                <div className="flex items-center gap-3">
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="cssanimation leRolling tracking-widest">{loadingStep}</span>
                 </div>
               ) : (
                 <>
-                  <Sparkles className="h-5 w-5" />
-                  Ignite Listing
+                  <Sparkles className="h-4 w-4 lg:h-5 lg:w-5" />
+                  <span>Ignite Listing</span>
                 </>
               )}
             </button>
@@ -517,72 +532,107 @@ export default function ListingGenerator({ user }: { user: any }) {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-10"
         >
-          {/* Results Navigation */}
-          <div className="bg-white/80 backdrop-blur-xl p-4 rounded-[3rem] border border-slate-200 shadow-2xl sticky top-8 z-20 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="flex gap-2 overflow-x-auto pb-2 lg:pb-0 hide-scrollbar px-2">
-              {Object.keys(results).map(p => (
-                <button
-                  key={p}
-                  onClick={() => setActiveTab(p)}
-                  className={`px-8 py-4 rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
-                    activeTab === p
-                      ? 'bg-slate-900 text-white shadow-xl'
-                      : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-            
-            <div className="flex items-center gap-3 px-2">
-              <button
-                onClick={() => setStep(1)}
-                className="px-6 py-4 rounded-[1.25rem] border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
-              >
-                Reset
-              </button>
+          {/* Results Navigation - Only shown if multiple results (not expected with current single-select) */}
+          {Object.keys(results).length > 1 && (
+            <div className="bg-white/80 backdrop-blur-xl p-4 rounded-[3rem] border border-slate-200 shadow-2xl sticky top-8 z-20 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="flex gap-2 overflow-x-auto pb-2 lg:pb-0 hide-scrollbar px-2">
+                {Object.keys(results).map(p => {
+                  const mp = MARKETPLACES.find(m => m.id === p);
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setActiveTab(p)}
+                      className={`flex items-center gap-2 px-8 py-4 rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
+                        activeTab === p
+                          ? 'bg-slate-900 text-white shadow-xl'
+                          : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                      }`}
+                    >
+                      <span className="text-sm">{mp?.icon || '📦'}</span>
+                      {mp?.name || p}
+                    </button>
+                  );
+                })}
+              </div>
               
-              <div className="relative group">
+              <div className="flex items-center gap-3 px-2">
                 <button
-                  onClick={() => setShowExportMenu(!showExportMenu)}
-                  className="flex items-center justify-center gap-3 rounded-[1.25rem] border border-slate-200 bg-white px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all"
+                  onClick={() => setStep(1)}
+                  className="px-6 py-4 rounded-[1.25rem] border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
                 >
-                  <Download className="h-4 w-4" />
-                  Export
+                  Reset
                 </button>
                 
-                <AnimatePresence>
-                  {showExportMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute right-0 mt-3 w-40 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden z-30"
-                    >
-                      {['json', 'csv', 'txt'].map((fmt) => (
-                        <button 
-                          key={fmt}
-                          onClick={() => { handleExport(fmt as any); setShowExportMenu(false); }} 
-                          className="w-full text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition-colors border-b border-slate-50 last:border-0"
-                        >
-                          {fmt}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                <div className="relative group">
+                  <button
+                    onClick={() => setShowExportMenu(!showExportMenu)}
+                    className="flex items-center justify-center gap-3 rounded-[1.25rem] border border-slate-200 bg-white px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all"
+                  >
+                    <Download className="h-4 w-4" />
+                    Export
+                  </button>
+                  
+                  <AnimatePresence>
+                    {showExportMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute right-0 mt-3 w-40 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden z-30"
+                      >
+                        {['json', 'csv', 'txt'].map((fmt) => (
+                          <button 
+                            key={fmt}
+                            onClick={() => { handleExport(fmt as any); setShowExportMenu(false); }} 
+                            className="w-full text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition-colors border-b border-slate-50 last:border-0"
+                          >
+                            {fmt}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
-              <button
-                onClick={handleCopy}
-                className="flex items-center justify-center gap-3 rounded-[1.25rem] bg-blue-600 px-8 py-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700 shadow-xl shadow-blue-600/20 transition-all active:scale-95"
-              >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                {copied ? 'Copied' : 'Copy All'}
-              </button>
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center justify-center gap-3 rounded-[1.25rem] bg-blue-600 px-8 py-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700 shadow-xl shadow-blue-600/20 transition-all active:scale-95"
+                >
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copied ? 'Copied' : 'Copy All'}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {Object.keys(results).length === 1 && (
+            <div className="bg-white/80 backdrop-blur-xl p-6 rounded-[3rem] border border-slate-200 shadow-2xl flex items-center justify-between gap-6 px-10">
+               <div className="flex items-center gap-6">
+                 <div className="h-16 w-16 rounded-3xl bg-blue-600 flex items-center justify-center text-3xl shadow-xl shadow-blue-600/20 text-white">
+                   {MARKETPLACES.find(m => m.id === activeTab)?.icon || '📦'}
+                 </div>
+                 <div>
+                   <h3 className="text-2xl font-black font-display text-slate-900">{MARKETPLACES.find(m => m.id === activeTab)?.name || activeTab}</h3>
+                   <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Listing Optimized Successfully</p>
+                 </div>
+               </div>
+               <div className="flex items-center gap-4">
+                 <button
+                   onClick={() => setStep(1)}
+                   className="px-6 py-4 rounded-2xl border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all font-mono"
+                 >
+                   BACK
+                 </button>
+                 <button
+                   onClick={handleCopy}
+                   className="flex items-center justify-center gap-3 rounded-2xl bg-slate-900 px-8 py-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-600 shadow-xl transition-all active:scale-95"
+                 >
+                   {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                   {copied ? 'Copied' : 'COPY CONTENT'}
+                 </button>
+               </div>
+            </div>
+          )}
           
           <AnimatePresence mode="wait">
             <motion.div
@@ -599,11 +649,9 @@ export default function ListingGenerator({ user }: { user: any }) {
                 }
               }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-10 cssanimation leFadeInUp"
+              className="flex flex-col gap-10 cssanimation leFadeInUp"
             >
-              {/* Left Column: Core Content */}
-              <div className="lg:col-span-8 space-y-10">
-                {/* Main Content Card */}
+              {/* Main Content Card */}
                 <div className="bg-white p-10 rounded-[3.5rem] border border-slate-200 shadow-2xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-blue-50 rounded-full blur-3xl -mr-20 -mt-20 opacity-30"></div>
                   
@@ -700,7 +748,7 @@ export default function ListingGenerator({ user }: { user: any }) {
                 </div>
 
                 {/* Features Grid */}
-                {results[activeTab].bulletPoints && (
+                {Array.isArray(results[activeTab].bulletPoints) && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {results[activeTab].bulletPoints.map((point: string, i: number) => (
                       <motion.div 
@@ -718,10 +766,9 @@ export default function ListingGenerator({ user }: { user: any }) {
                     ))}
                   </div>
                 )}
-              </div>
 
-              {/* Right Column: Intelligence & SEO */}
-              <div className="lg:col-span-4 space-y-10">
+              {/* Intelligence & SEO */}
+              <div className="space-y-10">
                 {/* SEO Score Card */}
                 <div className="bg-slate-900 p-10 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden">
                   <div className="absolute bottom-0 right-0 w-32 h-32 bg-blue-600 rounded-full blur-3xl -mb-16 -mr-16 opacity-40"></div>
@@ -779,20 +826,6 @@ export default function ListingGenerator({ user }: { user: any }) {
                   </div>
                 </div>
 
-                {/* Suggestions Card */}
-                <div className="bg-blue-600 p-10 rounded-[3.5rem] text-white shadow-2xl shadow-blue-600/20">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-200 mb-8">AI Suggestions</h4>
-                  <ul className="space-y-6">
-                    {Array.isArray(results[activeTab].seoAnalysis?.suggestions) && results[activeTab].seoAnalysis.suggestions.map((s: string, i: number) => (
-                      <li key={i} className="flex items-start gap-4 group">
-                        <div className="h-6 w-6 rounded-lg bg-white/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-white group-hover:text-blue-600 transition-all">
-                          <Lightbulb className="h-3 w-3" />
-                        </div>
-                        <p className="text-xs font-bold leading-relaxed text-blue-50">{s}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
 
                 {/* Market Intelligence */}
                 {results[activeTab].marketInsights && (
@@ -809,44 +842,7 @@ export default function ListingGenerator({ user }: { user: any }) {
                       </div>
                     </div>
 
-                    {/* NEW: PROFIT CALCULATOR (ADVANCED FEATURE) */}
-                    <div className="p-8 rounded-[2.5rem] bg-slate-900 text-white space-y-6 relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 rounded-full blur-[80px] -mr-16 -mt-16 opacity-30 group-hover:scale-150 transition-transform duration-700"></div>
-                      <div className="flex justify-between items-center relative z-10">
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.4em] font-mono">Advanced Tool</p>
-                          <h4 className="text-2xl font-black font-display tracking-tight leading-none">Profit Estimator 💸</h4>
-                        </div>
-                        <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/10">
-                           <Calculator className="h-5 w-5 text-blue-400" />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 relative z-10">
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Selling Price (₹)</label>
-                          <p className="text-xl font-black font-mono">₹{results[activeTab].marketInsights.competitorPrices?.[0]?.price?.replace('₹', '') || '599'}</p>
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Estimated Shipping</label>
-                          <p className="text-xl font-black font-mono text-emerald-400">₹45</p>
-                        </div>
-                      </div>
-
-                      <div className="pt-4 border-t border-white/10 relative z-10">
-                        <div className="flex justify-between items-end">
-                          <div>
-                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Net Margin Per Unit</p>
-                            <p className="text-3xl font-black font-mono tracking-tighter">₹{parseInt(results[activeTab].marketInsights.competitorPrices?.[0]?.price?.replace('₹', '') || '599') - 180}</p>
-                          </div>
-                          <div className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest mb-1">
-                            High Profitability
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {results[activeTab].marketInsights.competitorPrices && results[activeTab].marketInsights.competitorPrices.length > 0 && (
+                    {Array.isArray(results[activeTab].marketInsights.competitorPrices) && results[activeTab].marketInsights.competitorPrices.length > 0 && (
                       <div className="space-y-4 pt-4">
                         <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Real-time Competitor Pricing</span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -860,7 +856,7 @@ export default function ListingGenerator({ user }: { user: any }) {
                       </div>
                     )}
                     
-                    {results[activeTab].marketInsights.competitorDeepDive && results[activeTab].marketInsights.competitorDeepDive.length > 0 && (
+                    {Array.isArray(results[activeTab].marketInsights.competitorDeepDive) && results[activeTab].marketInsights.competitorDeepDive.length > 0 && (
                       <div className="space-y-4 pt-6 border-t border-slate-100 relative">
                         <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Advanced Competitor Deep-Dive</span>
                         
@@ -905,36 +901,7 @@ export default function ListingGenerator({ user }: { user: any }) {
                       </div>
                     )}
 
-                    <div className="space-y-4 pt-6 border-t border-slate-100">
-                      <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Market Opportunity Heatmap</span>
-                      <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 relative overflow-hidden">
-                        <div className="grid grid-cols-5 gap-1 h-32">
-                          {[...Array(25)].map((_, i) => {
-                            const intensity = Math.floor(Math.random() * 5);
-                            const colors = ['bg-slate-100', 'bg-blue-100', 'bg-blue-300', 'bg-blue-500', 'bg-blue-700'];
-                            return (
-                              <div key={i} className={`rounded-sm transition-all hover:scale-110 cursor-help ${colors[intensity]}`} title="High Demand Area"></div>
-                            );
-                          })}
-                        </div>
-                        <div className="flex justify-between mt-4">
-                           <div className="flex items-center gap-1.5">
-                              <div className="h-2 w-2 rounded-full bg-slate-200"></div>
-                              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Low Competition</span>
-                           </div>
-                           <div className="flex items-center gap-1.5">
-                              <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest text-right">High Demand</span>
-                              <div className="h-2 w-2 rounded-full bg-blue-600"></div>
-                           </div>
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                           <div className="px-4 py-2 bg-white/90 backdrop-blur-sm rounded-xl border border-blue-100 shadow-xl flex items-center gap-2">
-                              <Sparkles className="h-3 w-3 text-blue-600" />
-                              <span className="text-[10px] font-black text-slate-900 uppercase">Growth Pocket Identified</span>
-                           </div>
-                        </div>
-                      </div>
-                    </div>
+
                     {results[activeTab].marketInsights.pricingStrategy && (
                       <div className="p-6 rounded-3xl bg-emerald-50 border border-emerald-100 italic">
                         <p className="text-[10px] font-bold text-emerald-800 leading-relaxed shadow-emerald-500/10">
@@ -962,7 +929,7 @@ export default function ListingGenerator({ user }: { user: any }) {
                 </div>
 
                 {/* Step-by-Step Guide */}
-                {results[activeTab].optimizationSteps && (
+                {Array.isArray(results[activeTab].optimizationSteps) && (
                   <div className="bg-emerald-600 p-10 rounded-[3.5rem] text-white shadow-2xl shadow-emerald-600/20">
                     <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-200 mb-8">Listing Roadmap</h4>
                     <div className="space-y-6">

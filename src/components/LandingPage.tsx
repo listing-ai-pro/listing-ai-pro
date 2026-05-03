@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Dashboard from './Dashboard';
 import Auth from './Auth';
 import JDChatbot from './JDChatbot';
+import SocialProofPopup from './SocialProofPopup';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, LogIn, UserPlus } from 'lucide-react';
 
@@ -45,8 +46,9 @@ export default function LandingPage() {
         <Dashboard />
       </main>
 
-      {/* JD Chatbot */}
+      {/* Overlays & Popups */}
       <JDChatbot user={undefined} />
+      <SocialProofPopup />
 
       {/* Auth Modal Overlay */}
       <AnimatePresence>

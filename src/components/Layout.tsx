@@ -15,9 +15,12 @@ import AdminPanel from './AdminPanel';
 import MeeshoShippingOptimizer from './MeeshoShippingOptimizer';
 import Subscription from './Subscription';
 import BulkGenerator from './BulkGenerator';
+import TrendingProducts from './TrendingProducts';
 import AdminMessageOverlay from './AdminMessageOverlay';
 import JDChatbot from './JDChatbot';
 import TrialExpiredModal from './TrialExpiredModal';
+import SocialProofPopup from './SocialProofPopup';
+import LabelProcessor from './LabelProcessor';
 import { isPlanActive } from '../lib/subscription';
 
 export default function Layout({ children, user }: { children: React.ReactNode, user: any }) {
@@ -46,10 +49,12 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
     { name: 'Dashboard', icon: LayoutDashboard },
     { name: 'Listing Generator', icon: FileText, locked: !isPlanActive(user) },
     { name: 'Competitor Analysis', icon: Search, locked: !isPlanActive(user) },
+    { name: 'Trending Products', icon: Zap, badge: 'NEW', locked: !isPlanActive(user) },
     { name: 'A+ Content', icon: BookOpen, locked: !isPlanActive(user) },
     { name: 'AI Photoshoot', icon: Camera, badge: 'PRO', locked: !isPlanActive(user) },
     { name: 'Low Shipping', icon: Zap, badge: 'NEW', locked: !isPlanActive(user) },
     { name: 'Bulk Generator', icon: Zap, badge: 'YEARLY', locked: user.activePlanId !== 'yearly' },
+    { name: 'Crop Labels', icon: FileText, badge: 'NEW', locked: !isPlanActive(user) },
     { name: 'Subscription', icon: CreditCard },
     { name: 'Admin Dashboard', icon: ShieldCheck },
   ].filter(item => {
@@ -65,7 +70,7 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
 
   const renderContent = () => {
     const isActive = isPlanActive(user);
-    const isTool = ['Listing Generator', 'Competitor Analysis', 'AI Photoshoot', 'Low Shipping', 'A+ Content', 'Bulk Generator'].includes(activeTab);
+    const isTool = ['Listing Generator', 'Competitor Analysis', 'Trending Products', 'AI Photoshoot', 'Low Shipping', 'A+ Content', 'Bulk Generator', 'Crop Labels'].includes(activeTab);
 
     // Yearly restriction for Bulk Generator
     if (activeTab === 'Bulk Generator' && user.activePlanId !== 'yearly') {
@@ -133,6 +138,8 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
         return <ListingGenerator user={user} />;
       case 'Competitor Analysis':
         return <MarketIntelligence user={user} />;
+      case 'Trending Products':
+        return <TrendingProducts />;
       case 'AI Photoshoot':
         return <AIPhotoStudio user={user} />;
       case 'Low Shipping':
@@ -141,6 +148,8 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
         return <APlusContentGenerator user={user} />;
       case 'Bulk Generator':
         return <BulkGenerator user={user} />;
+      case 'Crop Labels':
+        return <LabelProcessor user={user} />;
       case 'Subscription':
         return <Subscription user={user} />;
       case 'Admin Dashboard':
@@ -172,14 +181,14 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileMenuOpen(false)}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden"
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-40 lg:hidden"
             />
             <motion.aside
-              initial={{ x: -320 }}
+              initial={{ x: "-100%" }}
               animate={{ x: 0 }}
-              exit={{ x: -320 }}
+              exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 left-0 bottom-0 w-[300px] bg-slate-900 z-50 lg:hidden flex flex-col shadow-2xl border-r border-white/10"
+              className="fixed top-0 left-0 bottom-0 w-full max-w-[320px] bg-slate-900 z-50 lg:hidden flex flex-col shadow-2xl border-r border-white/10"
             >
               <div className="absolute top-6 right-4 lg:hidden">
                 <button 
@@ -215,21 +224,21 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
             <div className="flex items-center gap-3 lg:gap-8 min-w-0">
               <button 
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="lg:hidden h-9 w-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 shrink-0"
+                className="lg:hidden h-11 w-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 shrink-0"
               >
-                <Menu className="h-4 w-4" />
+                <Menu className="h-5 w-5" />
               </button>
               <div className="h-12 w-px bg-white/5 hidden lg:block"></div>
               <div className="space-y-0.5 lg:space-y-1 min-w-0">
                 <p className="text-[8px] lg:text-[10px] font-black uppercase tracking-[0.4em] text-blue-500/80 font-mono hidden lg:block">Workspace</p>
-                <h1 className="text-lg lg:text-3xl font-black text-white font-display tracking-tight truncate mb-1">{activeTab}</h1>
+                <h1 className="text-lg lg:text-3xl font-black text-white font-display tracking-tight truncate">{activeTab}</h1>
               </div>
             </div>
           </div>
           
           {/* Right Actions */}
-          <div className="flex items-center gap-4 lg:gap-8">
-            <div className="hidden sm:flex items-center gap-3 px-6 py-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+          <div className="flex items-center gap-3 lg:gap-8">
+            <div className="hidden sm:flex items-center gap-3 px-6 py-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shrink-0">
               <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse"></div>
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Node: Central-1</span>
             </div>
@@ -237,18 +246,18 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
             <div className="hidden lg:block w-px h-10 bg-white/5 mx-2"></div>
             
             <a 
-              href={`https://wa.me/919023654443?text=${encodeURIComponent(`Hi Help Desk, I need assistance with ListingAI.\n\nUser: ${user.displayName || 'Seller'}\nEmail: ${user.email}\nSeller ID: ${user.sellerId || user.uid?.substring(0, 8)}`)}`}
+              href="https://chat.whatsapp.com/BTFHZBxx4hM1ybQjzsMmcC"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center justify-center h-10 w-10 lg:h-16 lg:w-16 rounded-full bg-emerald-500 text-white text-[8px] lg:text-[11px] font-black uppercase hover:bg-emerald-400 transition-all shadow-2xl shadow-emerald-500/30 active:scale-95 border-2 lg:border-4 border-slate-950 glow-blue group relative shrink-0"
+              className="flex items-center justify-center px-4 h-10 lg:h-16 rounded-full bg-emerald-500 text-white font-black uppercase hover:bg-emerald-400 transition-all shadow-2xl shadow-emerald-500/30 active:scale-95 border-2 lg:border-4 border-slate-950 glow-blue group relative shrink-0"
             >
-              Help
-              <span className="absolute -top-1 -right-1 h-4 w-4 lg:h-5 lg:w-5 bg-white rounded-full flex items-center justify-center">
-                <MessageCircle className="h-2 w-2 lg:h-3 lg:w-3 text-emerald-600 fill-emerald-600" />
+              <span className="text-[9px] lg:text-[11px]">WP Community</span>
+              <span className="absolute -top-1.5 -right-1.5 h-5 w-5 lg:h-6 lg:w-6 bg-white rounded-full flex items-center justify-center border-2 border-slate-950">
+                <MessageCircle className="h-2.5 w-2.5 lg:h-3.5 lg:w-3.5 text-emerald-600 fill-emerald-600" />
               </span>
             </a>
             
-            <div className="h-10 w-10 lg:h-16 lg:w-16 rounded-xl lg:rounded-3xl bg-slate-900 text-blue-400 flex items-center justify-center text-base lg:text-2xl font-black shadow-2xl border-2 lg:border-4 border-slate-950 font-display shrink-0">
+            <div className="h-10 w-10 lg:h-16 lg:w-16 rounded-xl lg:rounded-3xl bg-slate-900 text-blue-400 flex items-center justify-center text-sm lg:text-2xl font-black shadow-2xl border-2 lg:border-4 border-slate-950 font-display shrink-0">
               {user.displayName ? user.displayName.substring(0, 1).toUpperCase() : (user.email ? user.email.substring(0, 1).toUpperCase() : 'L')}
             </div>
           </div>
@@ -278,6 +287,7 @@ export default function Layout({ children, user }: { children: React.ReactNode, 
       </main>
       <AdminMessageOverlay user={user} />
       <JDChatbot currentTab={activeTab} user={user} />
+      <SocialProofPopup user={user} />
       <TrialExpiredModal 
         isOpen={showExpiredModal} 
         onClose={() => setShowExpiredModal(false)} 

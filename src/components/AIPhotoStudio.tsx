@@ -1,4 +1,6 @@
 import React, { useState, useRef } from 'react';
+import { db } from '../firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { trackUsage, checkLimit, PLAN_LIMITS } from '../lib/usage';
 import { useUsage } from '../hooks/useUsage';
 import { trackAction } from '../lib/actions';
@@ -63,12 +65,15 @@ export default function AIPhotoStudio({ user }: { user: any }) {
     CREATIVE: ['Walking Motion', 'Elegant Lean', 'Sitting Pose', 'Candid Look', 'Hero Pose', 'Action Pose', 'Looking Over Shoulder', 'Leaning Forward', 'Hands in Pockets', 'Dynamic Twirl', 'POV Selfie', 'POV Mirror Selfie']
   };
 
-  const handStylingOptions = ['Neutral', 'Hand on Hip', 'Both Hands on Hips', 'Hands in Pockets', 'Adjusting Sleeve', 'Fixing Hair', 'Holding Hem', 'Hands Folded', 'One Hand on Shoulder', 'Adjusting Collar'];
+  const PRODUCT_SHOT_TYPES = ['Eye-Level', '45 Degree Angle', 'Top-Down (Flat Lay)', 'Side Profile', 'Macro Close-up', 'Low Angle'];
+  const PRODUCT_LIGHTING = ['Professional Studio', 'Natural Window', 'Soft Diffused', 'Warm Ambient', 'Harsh Sunlight', 'Dramatic Rim Light'];
+  const PRODUCT_SURFACES = ['Minimalist Marble', 'Professional White', 'Rustic Wood', 'Sleek Concrete', 'Reflective Glass', 'Soft Velvet'];
+
+  const handStylingOptions = ['Neutral' , 'Hand on Hip', 'Both Hands on Hips', 'Hands in Pockets', 'Adjusting Sleeve', 'Fixing Hair', 'Holding Hem', 'Hands Folded', 'One Hand on Shoulder', 'Adjusting Collar'];
   const expressionOptions = ['Neutral', 'Soft Smile', 'Confident', 'Joyful', 'Serious', 'Playful', 'Serene'];
   const cameraAngleOptions = ['Eye-Level', 'Low Angle', 'High Angle', 'Dutch Angle', 'Worm\'s Eye View', 'Bird\'s Eye View'];
   const focalLengthOptions = ['24mm (Ultra-Wide)', '35mm (Wide)', '50mm (Standard)', '85mm (Portrait)', '135mm (Telephoto)'];
   const aspectRatioOptions = ['Portrait', 'Square', 'Landscape', 'Stories'];
-  const numImagesOptions = [1, 2, 4, 6, 8];
 
   const steps = [
     { id: 1, title: 'Analysis', desc: 'AI Image Analysis' },
@@ -78,10 +83,54 @@ export default function AIPhotoStudio({ user }: { user: any }) {
   ];
 
   const poses = ['Full Body Front', 'Hand on Hip', 'Back View', '3/4 View'];
+  const [lighting, setLighting] = useState('Professional Studio');
+  const [surface, setSurface] = useState('Minimalist Marble');
+
+  const reportError = async (error: string, context: string) => {
+    setErrorMsg(error);
+    
+    // 1. Report to Firestore for Admin
+    try {
+      await addDoc(collection(db, 'error_reports'), {
+        userId: user.uid,
+        userEmail: user.email,
+        userName: user.displayName || 'Seller',
+        error: error,
+        context: context,
+        component: 'AIPhotoStudio',
+        timestamp: serverTimestamp(),
+        mode: mode,
+        status: 'pending'
+      });
+    } catch (e) {
+      console.error("Failed to report error to Firebase:", e);
+    }
+
+    // 2. Trigger JD Support Bot
+    window.dispatchEvent(new CustomEvent('trigger-jd-chat', { 
+      detail: { 
+        open: true, 
+        message: `Bhai, AI Photo Studio mein ek issue aaya hai: **${error}**. \n\nChinta mat karo, maine technical team ko signal bhej diya hai metrics tab mein. Kya main isko fix karne mein aapki help kar sakta hoon?` 
+      } 
+    }));
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Check for supported formats
+    const supportedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!supportedTypes.includes(file.type)) {
+      reportError('Unsupported format! Please use JPG, PNG or WEBP images only.', 'Image Upload');
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      reportError('File size too large! Max limit is 20MB.', 'Image Upload');
+      return;
+    }
+
     setUploading(true);
     try {
       const compressed = await compressImage(file);
@@ -99,7 +148,7 @@ export default function AIPhotoStudio({ user }: { user: any }) {
       setResultImage(null);
       setErrorMsg('');
     } catch (error) {
-      setErrorMsg('Failed to process image.');
+      reportError('Failed to process image. Image file corrupt ho sakti hai.', 'Image Processing');
     } finally {
       setUploading(false);
     }
@@ -127,53 +176,66 @@ export default function AIPhotoStudio({ user }: { user: any }) {
 
       // 1. Analysis
       setStep(1);
-      const analysis = await analyzeProductImage(assetImage);
+      const analysis = await analyzeProductImage(assetImage).catch(e => {
+        throw new Error('AI Analysis failed. Image clarity check karein.');
+      });
       
       // 2. Settings
       setStep(2);
-      const suggestedSettings = await suggestPhotoshootSettings(assetImage, mode);
+      const suggestedSettings = await suggestPhotoshootSettings(assetImage, mode).catch(e => {
+        throw new Error('Studio configuration fail ho gayi. Dobara try karein.');
+      });
       setSettings(suggestedSettings);
       
       // 3. Background
       setStep(3);
-      const bgImage = await generateBackgroundImage(suggestedSettings.background || prompt);
+      const bgImage = await generateBackgroundImage(suggestedSettings.background || prompt).catch(e => {
+        throw new Error('Neural background synthesis fail ho gayi.');
+      });
       
       // 4. Render
       setStep(4);
       let finalImage;
-      if (mode === 'APPAREL') {
-        if (!modelImage) throw new Error('Please upload a model image for Virtual Try-On.');
-        finalImage = await generateVirtualTryOn({ 
-          productImage: assetImage, 
-          modelImage: modelImage,
-          pose,
-          handStyling,
-          expression,
-          cameraAngle,
-          focalLength,
-          aspectRatio,
-          ...suggestedSettings 
-        });
-      } else if (mode === 'MOCKUP') {
-        if (!designImage) throw new Error('Please upload a design/graphic image for Mockup.');
-        finalImage = await generateMockupImage({ 
-          productImage: assetImage, 
-          designImage: designImage,
-          cameraAngle,
-          focalLength,
-          aspectRatio,
-          ...suggestedSettings 
-        });
-      } else {
-        finalImage = await generateProductStudioImage({ 
-          productImage: assetImage, 
-          pose,
-          cameraAngle,
-          focalLength,
-          aspectRatio,
-          numImages,
-          ...suggestedSettings 
-        });
+      try {
+        if (mode === 'APPAREL') {
+          if (!modelImage) throw new Error('Upload Model IMAGE first');
+          finalImage = await generateVirtualTryOn({ 
+            ...suggestedSettings,
+            productImage: assetImage, 
+            modelImage: modelImage,
+            pose,
+            handStyling,
+            expression,
+            cameraAngle,
+            focalLength,
+            aspectRatio
+          });
+        } else if (mode === 'MOCKUP') {
+          if (!designImage) throw new Error('Please upload a design/graphic image for Mockup.');
+          finalImage = await generateMockupImage({ 
+            ...suggestedSettings,
+            productImage: assetImage, 
+            designImage: designImage,
+            cameraAngle,
+            focalLength,
+            aspectRatio
+          });
+        } else {
+          finalImage = await generateProductStudioImage({ 
+            ...suggestedSettings,
+            productImage: assetImage, 
+            modelImage,
+            pose,
+            lighting: mode === 'PRODUCT' ? lighting : suggestedSettings.lighting,
+            background: mode === 'PRODUCT' ? `On a ${surface} surface with ${suggestedSettings.background || prompt}` : suggestedSettings.background,
+            cameraAngle,
+            focalLength,
+            aspectRatio,
+            numImages
+          });
+        }
+      } catch (renderError: any) {
+        throw new Error(`Render failed: ${renderError.message || 'GPU Capacity issue'}`);
       }
       
       if (finalImage) {
@@ -182,7 +244,7 @@ export default function AIPhotoStudio({ user }: { user: any }) {
         trackCustom('PhotoStudioGenerated', { mode, pose, userEmail: user.email, userId: user.uid });
       }
     } catch (error: any) {
-      setErrorMsg(error.message);
+      reportError(error.message, 'Studio Auto-Magic');
     } finally {
       setLoading(false);
       setStep(0);
@@ -210,14 +272,25 @@ export default function AIPhotoStudio({ user }: { user: any }) {
     }
   };
 
+  const downloadImage = () => {
+    if (!resultImage) return;
+    const link = document.createElement('a');
+    link.href = resultImage;
+    link.download = `listing-pro-${Date.now()}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    trackAction('Download Photo', { mode });
+  };
+
   const handleModeChange = (m: 'APPAREL' | 'PRODUCT' | 'MOCKUP') => {
     setMode(m);
     if (m === 'MOCKUP') {
       setActiveTab('Product');
     } else if (m === 'APPAREL') {
       setActiveTab('Apparel');
-    } else {
-      setActiveTab('Apparel');
+    } else if (m === 'PRODUCT') {
+      setActiveTab('Product');
     }
   };
 
@@ -329,7 +402,7 @@ export default function AIPhotoStudio({ user }: { user: any }) {
         <div className="lg:col-span-3 flex flex-col gap-6">
           <div className="bg-[#1e293b] rounded-[2.5rem] border border-slate-800 p-6 flex-1 flex flex-col shadow-xl">
             <div className="flex items-center gap-2 bg-slate-900/50 p-1 rounded-2xl border border-slate-800 mb-6">
-              {(mode === 'MOCKUP' ? ['Product', 'Design'] : ['Model', 'Apparel']).map((tab) => (
+              {(mode === 'MOCKUP' ? ['Product', 'Design'] : mode === 'PRODUCT' ? ['Model', 'Product'] : ['Model', 'Apparel']).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab as any)}
@@ -339,7 +412,7 @@ export default function AIPhotoStudio({ user }: { user: any }) {
                       : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
                   }`}
                 >
-                  {tab === 'Model' ? <User className="h-3 w-3" /> : tab === 'Design' ? <Wand2 className="h-3 w-3" /> : <Shirt className="h-3 w-3" />}
+                  {tab === 'Model' ? <User className="h-3 w-3" /> : tab === 'Design' ? <Wand2 className="h-3 w-3" /> : (tab === 'Product' || tab === 'Apparel') ? <Shirt className="h-3 w-3" /> : <Box className="h-3 w-3" />}
                   {tab}
                 </button>
               ))}
@@ -456,9 +529,31 @@ export default function AIPhotoStudio({ user }: { user: any }) {
                   key="result"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="w-full h-full p-12 flex items-center justify-center relative z-10"
+                  className="w-full h-full p-12 flex flex-col items-center justify-center relative z-10"
                 >
-                  <img src={resultImage} alt="Studio Result" className="max-w-full max-h-full object-contain" referrerPolicy="no-referrer" />
+                  <div className="relative group/result max-w-full max-h-full">
+                    <img src={resultImage} alt="Studio Result" className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" referrerPolicy="no-referrer" />
+                    
+                    <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover/result:opacity-100 transition-opacity">
+                      <button 
+                        onClick={downloadImage}
+                        className="h-12 w-12 rounded-xl bg-white text-slate-900 border border-slate-200 flex items-center justify-center shadow-2xl hover:bg-blue-600 hover:text-white hover:border-blue-500 transition-all active:scale-95"
+                        title="Download High-Res Image"
+                      >
+                        <Download className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 opacity-0 group-hover/result:opacity-100 transition-all translate-y-2 group-hover/result:translate-y-0">
+                      <button 
+                        onClick={downloadImage}
+                        className="px-8 py-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white font-black text-[10px] uppercase tracking-widest flex items-center gap-3 hover:bg-white hover:text-slate-900 transition-all shadow-2xl"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Asset
+                      </button>
+                    </div>
+                  </div>
                 </motion.div>
               ) : (
                 <div key="placeholder" className="text-center">
@@ -500,33 +595,12 @@ export default function AIPhotoStudio({ user }: { user: any }) {
                 ))}
               </div>
             </div>
-
-            {/* Number of Images */}
-            {mode === 'PRODUCT' && (
-              <div className="space-y-4">
-                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Number of Images</p>
-                <div className="flex gap-2">
-                  {numImagesOptions.map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => setNumImages(num)}
-                      className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all ${
-                        numImages === num ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      {num}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Shot Type & Pose */}
-            {(mode === 'APPAREL' || mode === 'PRODUCT') && (
+            {/* Shot Type & Pose (Apparel) */}
+            {mode === 'APPAREL' && (
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-blue-400">
-                  <Zap className="h-4 w-4 fill-blue-400" />
-                  <p className="text-[10px] font-black uppercase tracking-widest">Shot Type & Pose</p>
+                  <User className="h-4 w-4" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Model Poses & Shots</p>
                 </div>
                 
                 {Object.entries(poseCategories).map(([category, poses]) => (
@@ -547,6 +621,75 @@ export default function AIPhotoStudio({ user }: { user: any }) {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Product Shot Types (Product) */}
+            {mode === 'PRODUCT' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-blue-400">
+                  <Box className="h-4 w-4" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Product Shot Specs</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {PRODUCT_SHOT_TYPES.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setPose(type)}
+                      className={`px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all text-left ${
+                        pose === type ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Lighting Style (Product) */}
+            {mode === 'PRODUCT' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-blue-400">
+                  <Zap className="h-4 w-4" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Studio Lighting</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {PRODUCT_LIGHTING.map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => setLighting(l)}
+                      className={`px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all text-left ${
+                        lighting === l ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Surface Material (Product) */}
+            {mode === 'PRODUCT' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-blue-400">
+                  <Palette className="h-4 w-4" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Surface & Texture</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {PRODUCT_SURFACES.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setSurface(s)}
+                      className={`px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all text-left ${
+                        surface === s ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 

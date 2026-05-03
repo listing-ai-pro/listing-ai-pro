@@ -21,6 +21,7 @@ const plans = [
     features: [
       '3 Listings / Day',
       '3 Competitor Analysis / Day',
+      '1 Label Crop / Day',
       'SEO Score Analysis',
       'All Marketplaces',
       '❌ No Advanced Deep-Dive',
@@ -43,6 +44,7 @@ const plans = [
     features: [
       '10 Listings / Day',
       '5 Competitor Analysis / Day',
+      '10 Label Crops / Day',
       '3 A+ Content / Day',
       '3 AI Photoshoot / Day',
       '3 AI Low Shipping / Day',
@@ -64,6 +66,7 @@ const plans = [
     features: [
       '15 Listings / Day',
       '7 Competitor Analysis / Day',
+      'Unlimited Label Crops',
       '4 A+ Content / Day',
       '3 AI Photoshoot / Day',
       '4 AI Low Shipping / Day',
@@ -86,6 +89,7 @@ const plans = [
     features: [
       '20 Listings / Day',
       '10 Competitor Analysis / Day',
+      'Unlimited Label Crops',
       '5 A+ Content / Day',
       '5 AI Photoshoot / Day',
       '5 AI Low Shipping / Day',

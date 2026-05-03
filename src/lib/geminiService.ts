@@ -95,24 +95,46 @@ export async function generateBackgroundImage(prompt: string) {
 
 export async function generateProductStudioImage(options: any) {
   return withRetry(async () => {
-    const { productImage, pose, lighting, background, cameraAngle, focalLength, numImages, aspectRatio } = options;
+    const { productImage, modelImage, pose, lighting, background, cameraAngle, focalLength, numImages, aspectRatio } = options;
+    
+    const parts: any[] = [];
+    
+    if (modelImage) {
+      parts.push({ 
+        text: `Strictly generate a professional high-fidelity product studio image where the provided model (second image) is naturally engaged with the provided product (first image).
+          - Engagement: The model should be holding, using, or interacting realistically with the product.
+          - Shot Type (STRICT): ${pose || 'Standard'}
+          - Lighting (STRICT): ${lighting || 'Studio soft light'}
+          - Background/Surface (STRICT): ${background || 'Clean studio white'}
+          - Camera Angle: ${cameraAngle || 'Eye-level'}
+          - Focal Length: ${focalLength || '50mm'}
+          - Aspect Ratio: ${aspectRatio || 'Portrait'}
+          
+          Mandatory: The final image MUST reflect the chosen Shot Type, Lighting, and Background surface precisely as described. Ensure seamless integration between model and product.` 
+      });
+      parts.push({ inlineData: { data: productImage.split(',')[1], mimeType: productImage.split(';')[0].split(':')[1] } });
+      parts.push({ inlineData: { data: modelImage.split(',')[1], mimeType: modelImage.split(';')[0].split(':')[1] } });
+    } else {
+      parts.push({ 
+        text: `Strictly generate a professional high-fidelity product studio image following these EXACT specifications:
+          - Product: Use the provided image exactly.
+          - Shot Type (STRICT): ${pose || 'Standard'}
+          - Lighting (STRICT): ${lighting || 'Studio soft light'}
+          - Background/Surface (STRICT): ${background || 'Clean studio white'}
+          - Camera Angle: ${cameraAngle || 'Eye-level'}
+          - Focal Length: ${focalLength || '50mm'}
+          - Aspect Ratio: ${aspectRatio || 'Portrait'}
+          
+          Mandatory: The final image MUST reflect the chosen Shot Type, Lighting, and Background surface precisely as described. Do not use AI defaults if they conflict with these settings.` 
+      });
+      parts.push({ inlineData: { data: productImage.split(',')[1], mimeType: productImage.split(';')[0].split(':')[1] } });
+    }
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: [{
         role: 'user',
-        parts: [
-          { text: `Generate a high-fidelity product studio image.
-            Product: [Provided Image]
-            Pose/Shot Type: ${pose || 'Standard'}
-            Lighting: ${lighting || 'Studio soft light'}
-            Background: ${background || 'Clean studio white'}
-            Camera Angle: ${cameraAngle || 'Eye-level'}
-            Focal Length: ${focalLength || '50mm'}
-            Aspect Ratio: ${aspectRatio || 'Portrait'}
-            Number of Variations: ${numImages || 1}
-            Ensure realistic shadows and reflections so it looks like it was clicked in a professional studio.` },
-          { inlineData: { data: productImage.split(',')[1], mimeType: productImage.split(';')[0].split(':')[1] } }
-        ]
+        parts: parts
       }]
     });
     const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData;

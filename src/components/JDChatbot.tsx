@@ -70,6 +70,19 @@ export default function JDChatbot({ currentTab = 'Dashboard', user }: { currentT
     }
   }, [messages]);
 
+  useEffect(() => {
+    const handleTrigger = (e: any) => {
+      const { message, open } = e.detail;
+      if (open) setIsOpen(true);
+      if (message) {
+        setMessages(prev => [...prev, { role: 'model', content: message }]);
+      }
+    };
+
+    window.addEventListener('trigger-jd-chat', handleTrigger);
+    return () => window.removeEventListener('trigger-jd-chat', handleTrigger);
+  }, []);
+
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 

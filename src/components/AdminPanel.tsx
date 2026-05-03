@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   collection, getDocs, query, orderBy, where, Timestamp, 
   doc, updateDoc, serverTimestamp, addDoc, collectionGroup,
-  onSnapshot, limit 
+  onSnapshot, limit, getDoc, setDoc 
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
@@ -11,7 +11,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { 
   Settings, BarChart3, Key, Loader2, FileText, Image as ImageIcon, 
   Search, BookOpen, Users, RotateCcw, Download, Edit3, 
-  Clock, UserX, CheckCircle2, Filter, ChevronRight, MoreHorizontal, Zap, MessageCircle, TrendingUp, Monitor, AlertTriangle, Sparkles
+  Clock, UserX, CheckCircle2, Filter, ChevronRight, MoreHorizontal, Zap, MessageCircle, TrendingUp, Monitor, AlertTriangle, Sparkles,
+  Lock, X, Globe
 } from 'lucide-react';
 
 // Standalone Component to avoid Hook violations in AdminPanel
@@ -124,8 +125,9 @@ function LiveAIConsole() {
 }
 
 export default function AdminPanel({ user }: { user: any }) {
-  const [activeTab, setActiveTab] = useState<'USERS' | 'ANALYTICS' | 'SETTINGS' | 'MESSAGES'>('USERS');
+  const [activeTab, setActiveTab] = useState<'USERS' | 'ANALYTICS' | 'SETTINGS' | 'MESSAGES' | 'ERRORS'>('USERS');
   const [users, setUsers] = useState<any[]>([]);
+  const [errorReports, setErrorReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'EXPIRED' | 'BLOCKED'>('ALL');
@@ -220,6 +222,24 @@ export default function AdminPanel({ user }: { user: any }) {
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    async function fetchErrors() {
+      if (activeTab !== 'ERRORS') return;
+      setLoading(true);
+      try {
+        const q = query(collection(db, 'error_reports'), orderBy('timestamp', 'desc'), limit(100));
+        const querySnapshot = await getDocs(q);
+        const errorData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setErrorReports(errorData);
+      } catch (error) {
+        console.error("Error fetching error reports:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchErrors();
+  }, [activeTab]);
+
   const stats = {
     total: users.length,
     active: users.filter(u => u.status === 'ACTIVE').length,
@@ -308,12 +328,57 @@ export default function AdminPanel({ user }: { user: any }) {
     }
   };
 
+  const [authorizedDomains, setAuthorizedDomains] = useState<string[]>([]);
+  const [newDomain, setNewDomain] = useState('');
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'SETTINGS') {
+      const fetchSettings = async () => {
+        const domainRef = doc(db, 'settings', 'authorized_domains');
+        const snap = await getDoc(domainRef);
+        if (snap.exists()) {
+          setAuthorizedDomains(snap.data().domains || []);
+        }
+      };
+      fetchSettings();
+    }
+  }, [activeTab]);
+
+  const handleAddDomain = async () => {
+    if (!newDomain.trim()) return;
+    const updated = [...authorizedDomains, newDomain.trim().toLowerCase()];
+    setSavingSettings(true);
+    try {
+      await setDoc(doc(db, 'settings', 'authorized_domains'), { domains: updated });
+      setAuthorizedDomains(updated);
+      setNewDomain('');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleRemoveDomain = async (domain: string) => {
+    const updated = authorizedDomains.filter(d => d !== domain);
+    setSavingSettings(true);
+    try {
+      await setDoc(doc(db, 'settings', 'authorized_domains'), { domains: updated });
+      setAuthorizedDomains(updated);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   const renderMessagesTab = () => (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl space-y-8">
         <div>
           <h3 className="text-2xl font-black text-slate-900 font-display">Broadcast Message 📢</h3>
-          <p className="text-sm font-medium text-slate-500 mt-1">Send a notification to your users</p>
+          <p className="text-sm font-medium text-slate-500 mt-1">Send a notification to your users (Expires after 24 hours)</p>
         </div>
 
         <div className="space-y-6">
@@ -542,6 +607,94 @@ export default function AdminPanel({ user }: { user: any }) {
                     >
                       <Edit3 className="h-4 w-4" />
                     </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderErrorsTab = () => (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-2xl lg:text-3xl font-black text-slate-900 font-display uppercase tracking-tight">System Error Reports</h3>
+          <p className="text-sm font-medium text-slate-500 mt-1">Real-time alerts and failed operations tracking for users.</p>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600/10 text-rose-600 border border-rose-600/20 shadow-lg shadow-rose-600/5">
+          <div className="h-2 w-2 rounded-full bg-rose-600 animate-pulse"></div>
+          <span className="text-[10px] font-black uppercase tracking-widest">Active Monitoring</span>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 bg-slate-50/30">
+                <th className="px-8 py-6 text-left">Error / Context</th>
+                <th className="px-8 py-6 text-left">User Details</th>
+                <th className="px-8 py-6 text-left">Component</th>
+                <th className="px-8 py-6 text-left">Timestamp</th>
+                <th className="px-8 py-6 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="py-20 text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-rose-600 mx-auto mb-4" />
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Loading Neural Reports...</p>
+                  </td>
+                </tr>
+              ) : errorReports.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-20 text-center">
+                    <Sparkles className="h-8 w-8 text-emerald-500 mx-auto mb-4 opacity-20" />
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No errors reported yet. System healthy! ✨</p>
+                  </td>
+                </tr>
+              ) : errorReports.map((report) => (
+                <tr key={report.id} className="hover:bg-rose-50/30 transition-all group">
+                  <td className="px-8 py-6">
+                    <div className="max-w-md">
+                      <p className="text-sm font-black text-slate-900 line-clamp-1 group-hover:line-clamp-none transition-all">{report.error}</p>
+                      <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                        <AlertTriangle className="h-2.5 w-2.5" />
+                        {report.context}
+                      </p>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-black text-xs uppercase">
+                        {report.userName?.substring(0, 1)}
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-black text-slate-700 uppercase tracking-tighter">{report.userName}</p>
+                        <p className="text-[10px] font-bold text-slate-400">{report.userEmail}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className="px-2.5 py-1 rounded-lg bg-slate-950 text-blue-400 text-[9px] font-black uppercase tracking-widest border border-slate-800">
+                      {report.component}
+                    </span>
+                  </td>
+                  <td className="px-8 py-6">
+                    <p className="text-[10px] font-bold text-slate-500 font-mono">
+                      {report.timestamp?.toDate ? report.timestamp.toDate().toLocaleString() : new Date().toLocaleString()}
+                    </p>
+                  </td>
+                  <td className="px-8 py-6 text-right">
+                    <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm ${
+                      report.status === 'resolved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-600 text-white animate-pulse'
+                    }`}>
+                      {report.status || 'UNSOLVED'}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -807,12 +960,12 @@ export default function AdminPanel({ user }: { user: any }) {
   return (
     <div className="max-w-7xl mx-auto space-y-12 pb-20">
       {/* Tab Navigation */}
-      <div className="flex items-center gap-2 bg-white p-1.5 rounded-[2rem] border border-slate-100 shadow-sm w-fit mx-auto">
-        {(['USERS', 'ANALYTICS', 'MESSAGES', 'SETTINGS'] as const).map((tab) => (
+      <div className="flex items-center gap-2 bg-white p-1.5 rounded-[2rem] border border-slate-100 shadow-sm w-fit mx-auto overflow-x-auto no-scrollbar max-w-full">
+        {(['USERS', 'ANALYTICS', 'MESSAGES', 'ERRORS', 'SETTINGS'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`flex items-center gap-3 px-8 py-3.5 rounded-[1.5rem] text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 ${
+            className={`flex items-center gap-3 px-6 lg:px-8 py-3.5 rounded-[1.5rem] text-[10px] lg:text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 whitespace-nowrap ${
               activeTab === tab 
                 ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' 
                 : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'
@@ -821,6 +974,7 @@ export default function AdminPanel({ user }: { user: any }) {
             {tab === 'USERS' && <Users className="h-4 w-4" />}
             {tab === 'ANALYTICS' && <BarChart3 className="h-4 w-4" />}
             {tab === 'MESSAGES' && <MessageCircle className="h-4 w-4" />}
+            {tab === 'ERRORS' && <AlertTriangle className="h-4 w-4 text-rose-500" />}
             {tab === 'SETTINGS' && <Settings className="h-4 w-4" />}
             {tab}
           </button>
@@ -838,11 +992,83 @@ export default function AdminPanel({ user }: { user: any }) {
           {activeTab === 'USERS' && renderUsersTab()}
           {activeTab === 'MESSAGES' && renderMessagesTab()}
           {activeTab === 'ANALYTICS' && renderAnalyticsTab()}
+          {activeTab === 'ERRORS' && renderErrorsTab()}
           {activeTab === 'SETTINGS' && (
-            <div className="p-20 text-center bg-white rounded-[3.5rem] border border-slate-100 shadow-xl">
-              <Settings className="h-16 w-16 text-slate-200 mx-auto mb-6" />
-              <h3 className="text-2xl font-black text-slate-900 font-display">System Settings</h3>
-              <p className="text-sm font-medium text-slate-400 mt-2">Platform-wide configuration and security protocols.</p>
+            <div className="max-w-4xl mx-auto space-y-12">
+              <div className="bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-xl space-y-10">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-3xl font-black text-slate-900 font-display uppercase tracking-tight">Security & Domains</h3>
+                    <p className="text-sm font-medium text-slate-400 mt-2">Manage authorized domains to prevent unauthorized remixes and piracy.</p>
+                  </div>
+                  <div className="h-14 w-14 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500">
+                    <Lock className="h-7 w-7" />
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] font-mono mb-4">Add White-listed Domain</label>
+                    <div className="flex gap-4">
+                      <div className="relative flex-1">
+                        <Globe className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <input 
+                          type="text" 
+                          value={newDomain}
+                          onChange={(e) => setNewDomain(e.target.value)}
+                          placeholder="e.g. yourdomain.com"
+                          className="w-full h-16 pl-14 pr-6 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-red-600/20 focus:border-red-600 transition-all outline-none"
+                        />
+                      </div>
+                      <button 
+                        onClick={handleAddDomain}
+                        disabled={savingSettings || !newDomain}
+                        className="px-8 h-16 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-widest hover:bg-red-600 transition-all shadow-xl disabled:opacity-50"
+                      >
+                        {savingSettings ? <Loader2 className="h-5 w-5 animate-spin" /> : "Authorize"}
+                      </button>
+                    </div>
+                    <p className="mt-3 text-[10px] font-bold text-slate-400 italic">
+                      * If this list is EMPTY, authorization is disabled and ALL domains can access the app.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] font-mono mb-2">Authorized Instances</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {authorizedDomains.length === 0 ? (
+                        <div className="col-span-full py-10 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Access Active (No Restrictions)</p>
+                        </div>
+                      ) : authorizedDomains.map((domain) => (
+                        <div key={domain} className="group flex items-center justify-between p-4 pl-6 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all hover:border-red-200">
+                          <div className="flex items-center gap-3">
+                             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                             <span className="text-sm font-bold text-slate-900">{domain}</span>
+                          </div>
+                          <button 
+                            onClick={() => handleRemoveDomain(domain)}
+                            className="h-8 w-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-red-50 rounded-3xl border border-red-100 flex gap-4">
+                   <AlertTriangle className="h-6 w-6 text-red-600 shrink-0" />
+                   <div>
+                      <p className="text-xs font-black text-red-900 uppercase tracking-tight mb-1">Security Warning</p>
+                      <p className="text-[10px] font-bold text-red-700 leading-relaxed uppercase opacity-80">
+                         Restricting domains will IMMEDIATELY block any instance of this app running on non-listed hostnames. 
+                         Ensure your primary domain is added before activating restrictions.
+                      </p>
+                   </div>
+                </div>
+              </div>
             </div>
           )}
         </motion.div>

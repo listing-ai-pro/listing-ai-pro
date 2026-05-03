@@ -247,16 +247,16 @@ export default function Dashboard() {
       <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-32">
         
         {/* 1. HERO SECTION */}
-        <motion.section variants={itemVariants} className="text-center pt-20 lg:pt-32 px-4 max-w-5xl mx-auto space-y-12 relative isolate">
+        <motion.section variants={itemVariants} className="text-center pt-12 lg:pt-32 px-4 max-w-5xl mx-auto space-y-10 lg:space-y-12 relative isolate">
           
           {/* Advanced 3D Hologram Orb (Behind Heading) */}
-          <div className="absolute top-[25%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] md:w-[800px] md:h-[800px] pointer-events-none z-0 opacity-50">
+          <div className="absolute top-[25%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[800px] md:h-[800px] pointer-events-none z-0 opacity-40 lg:opacity-50">
             <div className="w-full h-full perspective-[2000px] flex items-center justify-center">
               <div
-                className="animate-orb w-full h-full rounded-full border border-blue-500/30 shadow-[0_0_250px_rgba(37,99,235,0.4)] bg-blue-500/5"
+                className="animate-orb w-full h-full rounded-full border border-blue-500/30 shadow-[0_0_150px_rgba(37,99,235,0.3)] lg:shadow-[0_0_250px_rgba(37,99,235,0.4)] bg-blue-500/5"
                 style={{ transformStyle: 'preserve-3d' }}
               >
-                {[1,2,3,4,5,6].map((i) => (
+                {[1,2,3].map((i) => (
                   <div
                     key={`ring-${i}`}
                     className="animate-ring absolute inset-[-10%] rounded-full border-2 border-blue-400/50"
@@ -269,13 +269,9 @@ export default function Dashboard() {
                     } as any}
                   >
                     {/* Glowing nodes on the rings */}
-                    <div className="absolute top-0 left-1/2 w-3 h-3 bg-blue-300 rounded-full shadow-[0_0_20px_rgba(37,99,235,1)]" />
-                    <div className="absolute bottom-0 right-1/2 w-4 h-4 bg-indigo-400 rounded-full shadow-[0_0_25px_rgba(79,70,229,1)]" />
+                    <div className="absolute top-0 left-1/2 w-2 h-2 lg:w-3 lg:h-3 bg-blue-300 rounded-full shadow-[0_0_20px_rgba(37,99,235,1)]" />
                   </div>
                 ))}
-                {/* Plasma Core */}
-                <div className="animate-plasma absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-600/40 blur-[80px] rounded-full" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-indigo-400/30 blur-[40px] rounded-full animate-pulse" />
               </div>
             </div>
           </div>
@@ -284,18 +280,18 @@ export default function Dashboard() {
                <Zap className="h-4 w-4 text-blue-400 animate-pulse" />
                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Enterprise AI Growth Engine</span>
             </div>
-            <h1 className="text-5xl md:text-8xl font-black text-white leading-[0.9] tracking-tight font-display">
+            <h1 className="text-4xl sm:text-6xl lg:text-8xl font-black text-white leading-[1] lg:leading-[0.9] tracking-tight font-display">
               SELL <br />
               <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">EVERYWHERE</span>
             </h1>
-            <p className="text-xl md:text-2xl font-medium text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-xl lg:text-2xl font-medium text-slate-400 max-w-2xl mx-auto leading-relaxed px-4">
               Meesho pe sales nahi aa rahi? Shipping kharcha profit kha raha hai? <br />
               <span className="text-white font-black italic">ListingAI is the answer. 🚀</span>
             </p>
           </div>
 
-          <div className="flex flex-col md:flex-row items-center justify-center gap-6">
-             <WhatsAppButton />
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 px-4">
+             <WhatsAppButton className="w-full sm:w-auto" />
              <div className="flex -space-x-3">
                 {[1,2,3,4].map(i => (
                    <div key={i} className="h-10 w-10 rounded-full border-2 border-slate-950 bg-slate-800 overflow-hidden shadow-xl">
@@ -308,9 +304,9 @@ export default function Dashboard() {
              </div>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-8 md:gap-16 pt-10 border-t border-white/10 grayscale opacity-40">
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-8 md:gap-16 pt-10 border-t border-white/10 grayscale opacity-40">
              {['AMAZON', 'FLIPKART', 'MEESHO', 'SHOPIFY'].map(brand => (
-                <span key={brand} className="text-xl font-black tracking-widest text-slate-300">{brand}</span>
+                <span key={brand} className="text-sm sm:text-xl font-black tracking-widest text-slate-300">{brand}</span>
              ))}
           </div>
         </motion.section>
@@ -406,10 +402,10 @@ export default function Dashboard() {
 
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { name: 'Growth Trial', period: '7 Days', price: '0', icon: Sparkles, color: 'text-slate-400', bg: 'bg-white/5', text: 'text-white', cta: 'Start 7-Day Trial', highlight: false, features: ['3 Listings / Day', '3 Competitor Analysis / Day', 'SEO Score Analysis', 'All Marketplaces'] },
-                { name: 'ListingAI Max', period: '3 Days', price: '99', icon: Crown, color: 'text-rose-400', bg: 'bg-white/5', text: 'text-white', cta: 'Get Max Access', highlight: false, features: ['10 Listings / Day', '5 Competitor Analysis / Day', '3 A+ Content / Day', '3 AI Photoshoots / Day', '3 Low Shipping / Day'] },
-                { name: '1 Month', period: 'Month', price: '399', icon: Zap, color: 'text-blue-400', bg: 'bg-slate-900', text: 'text-white', cta: 'Get Monthly', highlight: false, features: ['15 Listings / Day', '7 Competitor Analysis / Day', '4 A+ Content / Day', '3 AI Photoshoots / Day', '4 Low Shipping / Day'] },
-                { name: '1 Year', period: 'Year', price: '1,999', icon: Star, color: 'text-amber-400', bg: 'bg-white/5', text: 'text-white', cta: 'Get Yearly', highlight: true, features: ['20 Listings / Day', '10 Competitor Analysis / Day', '5 A+ Content / Day', '5 AI Photoshoots / Day', '5 Low Shipping / Day', '5 Bulk Mega Listings / Day'] }
+                { name: 'Growth Trial', period: '7 Days', price: '0', icon: Sparkles, color: 'text-slate-400', bg: 'bg-white/5', text: 'text-white', cta: 'Start 7-Day Trial', highlight: false, features: ['3 Listings / Day', '3 Competitor Analysis / Day', '1 Label Crop / Day', 'SEO Score Analysis', 'All Marketplaces'] },
+                { name: 'ListingAI Max', period: '3 Days', price: '99', icon: Crown, color: 'text-rose-400', bg: 'bg-white/5', text: 'text-white', cta: 'Get Max Access', highlight: false, features: ['10 Listings / Day', '5 Competitor Analysis / Day', '10 Label Crops / Day', '3 A+ Content / Day', '3 AI Photoshoots / Day', '3 Low Shipping / Day'] },
+                { name: '1 Month', period: 'Month', price: '399', icon: Zap, color: 'text-blue-400', bg: 'bg-slate-900', text: 'text-white', cta: 'Get Monthly', highlight: false, features: ['15 Listings / Day', '7 Competitor Analysis / Day', 'Unlimited Label Crops', '4 A+ Content / Day', '3 AI Photoshoots / Day', '4 Low Shipping / Day'] },
+                { name: '1 Year', period: 'Year', price: '1,999', icon: Star, color: 'text-amber-400', bg: 'bg-white/5', text: 'text-white', cta: 'Get Yearly', highlight: true, features: ['20 Listings / Day', '10 Competitor Analysis / Day', 'Unlimited Label Crops', '5 A+ Content / Day', '5 AI Photoshoots / Day', '5 Low Shipping / Day', '5 Bulk Mega Listings / Day'] }
               ].map((plan, i) => (
                 <div key={i} className={`relative p-8 lg:p-10 rounded-[3rem] border ${plan.highlight ? 'border-blue-500 ring-8 ring-blue-900/40 shadow-2xl shadow-blue-600/20' : 'border-white/10 '} ${plan.bg} ${plan.text || ''} transition-all duration-500 hover:-translate-y-2 backdrop-blur-md`}>
                    {plan.highlight && <span className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-600 text-white text-[10px] font-black uppercase rounded-full tracking-widest whitespace-nowrap">Best Seller</span>}

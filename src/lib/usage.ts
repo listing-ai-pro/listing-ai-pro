@@ -2,7 +2,7 @@ import { doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { handleFirestoreError, OperationType } from './firestore-errors';
 
-export type UsageType = 'listingsGenerated' | 'marketAnalysis' | 'aplusGenerated' | 'photoshoots' | 'shippingOptimizations' | 'bulkGenerated';
+export type UsageType = 'listingsGenerated' | 'marketAnalysis' | 'aplusGenerated' | 'photoshoots' | 'shippingOptimizations' | 'bulkGenerated' | 'labelCrops';
 
 export const PLAN_LIMITS: Record<string, Record<UsageType, number>> = {
   trial: {
@@ -11,7 +11,8 @@ export const PLAN_LIMITS: Record<string, Record<UsageType, number>> = {
     aplusGenerated: 2,
     photoshoots: 0,
     shippingOptimizations: 0,
-    bulkGenerated: 0
+    bulkGenerated: 0,
+    labelCrops: 1
   },
   max: {
     listingsGenerated: 10,
@@ -19,7 +20,8 @@ export const PLAN_LIMITS: Record<string, Record<UsageType, number>> = {
     aplusGenerated: 3,
     photoshoots: 3,
     shippingOptimizations: 3,
-    bulkGenerated: 0
+    bulkGenerated: 0,
+    labelCrops: 10
   },
   monthly: {
     listingsGenerated: 15,
@@ -27,15 +29,8 @@ export const PLAN_LIMITS: Record<string, Record<UsageType, number>> = {
     aplusGenerated: 4,
     photoshoots: 3,
     shippingOptimizations: 4,
-    bulkGenerated: 0
-  },
-  'half-yearly': {
-    listingsGenerated: 18,
-    marketAnalysis: 8,
-    aplusGenerated: 5,
-    photoshoots: 4,
-    shippingOptimizations: 5,
-    bulkGenerated: 0
+    bulkGenerated: 0,
+    labelCrops: 99999
   },
   yearly: {
     listingsGenerated: 20,
@@ -43,7 +38,8 @@ export const PLAN_LIMITS: Record<string, Record<UsageType, number>> = {
     aplusGenerated: 5,
     photoshoots: 5,
     shippingOptimizations: 5,
-    bulkGenerated: 5
+    bulkGenerated: 5,
+    labelCrops: 99999
   }
 };
 
@@ -124,6 +120,7 @@ export async function trackUsage(userId: string, type: UsageType) {
         photoshoots: type === 'photoshoots' ? 1 : 0,
         shippingOptimizations: type === 'shippingOptimizations' ? 1 : 0,
         bulkGenerated: type === 'bulkGenerated' ? 1 : 0,
+        labelCrops: type === 'labelCrops' ? 1 : 0,
       });
     }
   } catch (error) {

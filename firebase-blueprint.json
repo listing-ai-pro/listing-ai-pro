@@ -61,6 +61,22 @@
         "timestamp": { "type": "string", "format": "date-time", "description": "Timestamp of the request" }
       },
       "required": ["userId", "type", "model", "status", "timestamp"]
+    },
+    "ErrorReport": {
+      "title": "ErrorReport",
+      "description": "Critical system or user errors reported for admin attention",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "User ID" },
+        "userEmail": { "type": "string", "description": "User email address" },
+        "userName": { "type": "string", "description": "User name" },
+        "error": { "type": "string", "description": "The exact error message" },
+        "context": { "type": "string", "description": "Where the error occurred" },
+        "component": { "type": "string", "description": "Component name" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When it happened" },
+        "status": { "type": "string", "enum": ["pending", "resolved"], "description": "Triage status" }
+      },
+      "required": ["userId", "userEmail", "userName", "error", "context", "component", "timestamp", "status"]
     }
   },
   "firestore": {
@@ -79,6 +95,10 @@
     "/ai_logs/{logId}": {
       "schema": "AiLog",
       "description": "AI API traffic logs"
+    },
+    "/error_reports/{reportId}": {
+      "schema": "ErrorReport",
+      "description": "Critical error reports"
     }
   }
 }

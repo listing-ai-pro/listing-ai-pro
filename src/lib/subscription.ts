@@ -24,9 +24,6 @@ export function isPlanActive(user: any): boolean {
     case 'monthly':
       durationDays = 30;
       break;
-    case 'half-yearly':
-      durationDays = 180;
-      break;
     case 'yearly':
       durationDays = 365;
       break;
@@ -55,7 +52,6 @@ export function getRemainingDays(user: any): number {
     case 'trial': durationDays = 7; break;
     case 'max': durationDays = 3; break;
     case 'monthly': durationDays = 30; break;
-    case 'half-yearly': durationDays = 180; break;
     case 'yearly': durationDays = 365; break;
     default: durationDays = 0;
   }

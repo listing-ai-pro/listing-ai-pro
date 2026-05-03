@@ -13,7 +13,6 @@ import {
   Camera, 
   RefreshCw, 
   LayoutGrid,
-  History,
   ShieldCheck,
   AlertCircle,
   Clock,
@@ -25,15 +24,6 @@ import {
   Sparkles,
   MessageCircle
 } from 'lucide-react';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
-} from 'recharts';
 import { useUsage } from '../hooks/useUsage';
 import { PLAN_LIMITS } from '../lib/usage';
 import { isPlanActive } from '../lib/subscription';
@@ -76,7 +66,6 @@ const DailyResetTimer = () => {
 
 export default function UserDashboard({ user, onTabChange }: { user: any, onTabChange?: (tab: string) => void }) {
   const { usage } = useUsage(user);
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [totalSaved, setTotalSaved] = useState(0);
 
   const isPro = user.subscriptionPlan === 'pro';
@@ -101,29 +90,10 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
   useEffect(() => {
     if (!user.uid) return;
     
-    // Fetch recent activities (simulated for now, but could be real from a 'logs' collection)
-    // For now, let's just make the existing ones feel more "real" by linking them to usage
-    const mockActivities = [
-      { title: "Maroon Ajrakh Blouse", time: "2 mins ago", type: "Listing", status: "Optimized" },
-      { title: "Silk Saree Lifestyle", time: "15 mins ago", type: "Photo", status: "Generated" },
-      { title: "Cotton Kurti Set", time: "1 hour ago", type: "Listing", status: "Optimized" },
-    ];
-    setRecentActivities(mockActivities);
-
     // Calculate total saved based on optimizations (₹35 per optimization)
     // In a real app, we'd sum all daily_stats
     setTotalSaved(usage.shippingOptimizations * 35);
   }, [user.uid, usage]);
-
-  const growthData = [
-    { name: 'Mon', orders: 12 },
-    { name: 'Tue', orders: 18 },
-    { name: 'Wed', orders: 15 },
-    { name: 'Thu', orders: 28 },
-    { name: 'Fri', orders: 35 },
-    { name: 'Sat', orders: 42 },
-    { name: 'Today', orders: usage.listingsGenerated * 3 + 5 }, // Dynamic based on real usage
-  ];
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -463,73 +433,6 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
                </div>
             </div>
           </div>
-
-          {/* Detailed Performance Chart */}
-          <div className="glass-card rounded-[2.5rem] p-8 lg:p-12 space-y-8 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-10">
-              <div className="h-40 w-40 bg-blue-600 rounded-full blur-[100px] opacity-10 group-hover:scale-150 transition-transform"></div>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-8 relative z-10">
-              <div className="space-y-2">
-                <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.5em] font-mono">Performance</p>
-                <h3 className="text-3xl font-black text-white font-display">Optimization Impact 📊</h3>
-              </div>
-              <div className="flex bg-white/5 p-2 rounded-[1.75rem] border border-white/10 backdrop-blur-xl">
-                <button className="px-6 py-2 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors">7d View</button>
-                <button className="px-6 py-2 rounded-2xl bg-blue-600 shadow-xl text-[11px] font-black uppercase tracking-widest text-white">30d Growth</button>
-              </div>
-            </div>
-
-            <div className="h-[350px] w-full relative z-10 p-4 bg-slate-950/20 rounded-[2.5rem] border border-white/5">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={growthData}>
-                  <defs>
-                    <linearGradient id="colorOrdersUser" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="8 8" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    dy={15}
-                    tick={{fill: '#64748b', fontSize: 10, fontWeight: 900, fontFamily: 'monospace', letterSpacing: '0.1em'}} 
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    dx={-10}
-                    tick={{fill: '#64748b', fontSize: 10, fontWeight: 900, fontFamily: 'monospace'}} 
-                  />
-                  <Tooltip 
-                    cursor={{ stroke: '#2563eb', strokeWidth: 2, strokeDasharray: '4 4' }}
-                    contentStyle={{
-                      borderRadius: '32px', 
-                      border: '1px solid rgba(255,255,255,0.1)', 
-                      boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', 
-                      padding: '24px',
-                      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                      backdropFilter: 'blur(20px)'
-                    }}
-                    labelStyle={{ color: '#94a3b8', fontWeight: 900, fontSize: '10px', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.1em' }}
-                    itemStyle={{color: '#fff', fontWeight: 900, fontSize: '18px'}}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="orders" 
-                    stroke="#2563eb" 
-                    strokeWidth={5} 
-                    fillOpacity={1} 
-                    fill="url(#colorOrdersUser)" 
-                    animationDuration={2500}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
         </div>
 
         {/* Intelligence Sidebar */}
@@ -574,63 +477,6 @@ export default function UserDashboard({ user, onTabChange }: { user: any, onTabC
                 Launch Intelligence
               </motion.button>
             </div>
-          </div>
-
-          {/* Activity Feed */}
-          <div className="glass-card rounded-[3.5rem] p-10 lg:p-14 border border-white/5 space-y-10 h-fit">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-[1.25rem] bg-white/5 flex items-center justify-center border border-white/10">
-                  <History className="h-6 w-6 text-slate-400" />
-                </div>
-                <h3 className="text-2xl font-black text-white font-display">Timeline</h3>
-              </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Live Feed</span>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              {recentActivities.map((item, i) => (
-                <div key={i} className="group relative pl-10 pb-10 last:pb-0">
-                  {/* Vertical Timeline Line */}
-                  {i !== recentActivities.length - 1 && (
-                    <div className="absolute left-[9px] top-8 bottom-0 w-[1px] bg-white/5"></div>
-                  )}
-                  {/* Timeline Dot */}
-                  <div className={`absolute left-0 top-1.5 h-5 w-5 rounded-full border-[6px] border-slate-950 shadow-2xl z-10 transition-transform group-hover:scale-125 ${
-                    item.type === 'Listing' ? 'bg-blue-500 shadow-blue-500/20' : 'bg-indigo-500 shadow-indigo-500/20'
-                  }`}></div>
-                  
-                  <div className="space-y-2 p-5 rounded-3xl bg-white/0 group-hover:bg-white/5 transition-all border border-transparent group-hover:border-white/5">
-                    <div className="flex justify-between items-start">
-                      <p className="text-[15px] font-black text-white tracking-tight">{item.title}</p>
-                      <span className="text-[11px] font-mono text-slate-500">{item.time}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="px-3 py-1 rounded-lg bg-white/5 text-[9px] font-black uppercase tracking-widest text-slate-400">
-                        {item.type}
-                      </div>
-                      <div className="h-1 w-1 rounded-full bg-slate-700"></div>
-                      <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">{item.status}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {recentActivities.length === 0 && (
-                <div className="text-center py-10 space-y-3">
-                  <div className="h-20 w-20 rounded-full bg-white/5 flex items-center justify-center mx-auto border border-white/10">
-                    <Sparkles className="h-10 w-10 text-slate-700" />
-                  </div>
-                  <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em] italic font-serif">No signal yet</p>
-                </div>
-              )}
-            </div>
-            
-            <button className="w-full py-5 rounded-3xl bg-white/5 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white/10 hover:text-white transition-all border border-white/5">
-              Archive History
-            </button>
           </div>
 
           {/* Sync Status Bento */}

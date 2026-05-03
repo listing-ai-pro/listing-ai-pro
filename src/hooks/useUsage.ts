@@ -14,7 +14,8 @@ export function useUsage(userOrId: any) {
     aplusGenerated: 0,
     photoshoots: 0,
     shippingOptimizations: 0,
-    bulkGenerated: 0
+    bulkGenerated: 0,
+    labelCrops: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -33,7 +34,8 @@ export function useUsage(userOrId: any) {
           aplusGenerated: data.aplusGenerated || 0,
           photoshoots: data.photoshoots || 0,
           shippingOptimizations: data.shippingOptimizations || 0,
-          bulkGenerated: data.bulkGenerated || 0
+          bulkGenerated: data.bulkGenerated || 0,
+          labelCrops: data.labelCrops || 0
         });
       } else {
         setUsage({
@@ -42,7 +44,8 @@ export function useUsage(userOrId: any) {
           aplusGenerated: 0,
           photoshoots: 0,
           shippingOptimizations: 0,
-          bulkGenerated: 0
+          bulkGenerated: 0,
+          labelCrops: 0
         });
       }
       setLoading(false);

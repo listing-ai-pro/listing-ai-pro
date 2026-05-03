@@ -51,7 +51,8 @@ service cloud.firestore {
              (!('aplusGenerated' in data) || (data.aplusGenerated is number && data.aplusGenerated >= 0 && data.aplusGenerated <= 50)) &&
              (!('photoshoots' in data) || (data.photoshoots is number && data.photoshoots >= 0 && data.photoshoots <= 50)) &&
              (!('shippingOptimizations' in data) || (data.shippingOptimizations is number && data.shippingOptimizations >= 0 && data.shippingOptimizations <= 50)) &&
-             (!('bulkGenerated' in data) || (data.bulkGenerated is number && data.bulkGenerated >= 0 && data.bulkGenerated <= 25));
+             (!('bulkGenerated' in data) || (data.bulkGenerated is number && data.bulkGenerated >= 0 && data.bulkGenerated <= 25)) &&
+             (!('labelCrops' in data) || (data.labelCrops is number && data.labelCrops >= 0 && data.labelCrops <= 200000));
     }
 
     function isValidAdminMsg(data) {
@@ -71,6 +72,18 @@ service cloud.firestore {
              data.timestamp is timestamp &&
              (!('errorMessage' in data) || (data.errorMessage is string || data.errorMessage == null)) &&
              (!('latency' in data) || (data.latency is number || data.latency == null));
+    }
+
+    function isValidErrorReport(data) {
+      return data.keys().hasAll(['userId', 'userEmail', 'userName', 'error', 'context', 'component', 'timestamp', 'status']) &&
+             data.userId is string &&
+             data.userEmail is string &&
+             data.userName is string &&
+             data.error is string &&
+             data.context is string &&
+             data.component is string &&
+             data.timestamp is timestamp &&
+             data.status in ['pending', 'resolved'];
     }
 
     // ===============================================================
@@ -100,6 +113,16 @@ service cloud.firestore {
     match /ai_logs/{logId} {
       allow create: if isAuthenticated() && isValidAiLog(request.resource.data);
       allow read: if isAdmin();
+    }
+
+    match /error_reports/{reportId} {
+      allow create: if isAuthenticated() && isValidErrorReport(request.resource.data);
+      allow read, update: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true; 
+      allow write: if isAdmin();
     }
 
     // Allow admins to query all daily_stats for analytics
