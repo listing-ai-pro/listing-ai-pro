@@ -2,3 +2,4 @@ fastapi
 uvicorn
 scrapling
 pydantic
+playwright
